@@ -87,10 +87,12 @@
 //   await checkAndSendReminders();
 // }
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from './supabase';
 import { sendSMSReminder } from './sms';
 import { sendReminderEmail } from './email';
-import { supabase } from './supabase';
+
+
+
 // import { sendReminderEmail } from './email';
 // import { sendSMSReminder } from './sms';
 // import cron from 'node-cron';
@@ -114,6 +116,7 @@ interface Reminder {
 }
 
 async function checkAndSendReminders() {
+  const supabase = getSupabase();
   console.log('🕐 Checking for due reminders...', new Date().toISOString());
   
   try {

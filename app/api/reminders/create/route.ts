@@ -1,10 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server';
+import { getSupabase } from '@/lib/supabase';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const dynamic = 'force-dynamic';
+
+const supabase = getSupabase();
 
 // POST - Create a new reminder
 export async function POST(request: Request) {

@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { sendReminderEmail } from '@/lib/email';
+import { getSupabaseServer } from '@/lib/supabase-server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const supabase = getSupabaseServer();
   // Verify cron secret to prevent unauthorized access (dev bypass)
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
@@ -35,7 +33,7 @@ export async function GET(request: Request) {
       if (emailSent) {
         await supabase
           .from('reminders')
-          .update({ is_sent: true })
+          .update({ is_sent: true } as any)
           .eq('id', reminder.id);
         sent++;
       }
