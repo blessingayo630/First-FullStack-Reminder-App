@@ -1,11 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+const supabaseClient = supabase;
 
 // GET - Fetch single reminder by ID (for edit)
 export async function GET(request: Request) {
