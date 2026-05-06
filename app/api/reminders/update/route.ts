@@ -81,16 +81,19 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // ✅ FIX: Same timezone handling as POST
+    // ✅ FIXED: Parse local datetime input and store correct UTC wall-clock time
     const localDueDate = new Date(dueDate);
     
+    // Validate date
     if (isNaN(localDueDate.getTime())) {
       return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
     }
     
+    // Convert local wall-clock to UTC (e.g., local 01:05 → UTC 00:05 for +1hr zone)
     const timezoneOffset = localDueDate.getTimezoneOffset();
     const utcDueDate = new Date(localDueDate.getTime() - (timezoneOffset * 60 * 1000));
     
+    // Calculate reminder time from UTC due date
     const reminderTime = new Date(utcDueDate);
     switch (remindUnit) {
       case 'minutes': 
