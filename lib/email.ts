@@ -95,6 +95,10 @@ interface Reminder {
 
 export async function sendReminderEmail(reminder: Reminder) {
   try {
+       if (!reminder.user_email) {
+      console.error('❌ No recipient email address found for reminder:', reminder.id);
+      return false;
+    }
     const dueDate = new Date(reminder.due_date).toLocaleString();
     
     const mailOptions = {
