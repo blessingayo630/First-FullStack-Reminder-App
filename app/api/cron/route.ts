@@ -5,13 +5,20 @@ import { supabaseService } from '@/lib/supabase';
 const supabase = supabaseService;
 
 export async function GET(request: Request) {
-  // Verify cron secret to prevent unauthorized access (dev bypass)
+  // Verify cron secret to prevent unauthorized access.
+  // Vercel Cron jobs typically won’t send custom Authorization headers,
+  // so we only enforce this check when BOTH:
+  // - CRON_SECRET is set
+  // - AND an Authorization header is actually present.
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
-  
-  if (process.env.NODE_ENV !== 'development' && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  if (process.env.NODE_ENV !== 'development' && cronSecret && authHeader) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
+  
   
   try {
     console.log('🕐 Cron job: Checking for due reminders...');

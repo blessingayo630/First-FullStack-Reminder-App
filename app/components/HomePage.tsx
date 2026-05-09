@@ -1,8 +1,8 @@
- // 'use client';
+// 'use client';
 
-// import { useState, useEffect, useCallback } from \'react\';
-// import { toast } from \'react-toastify\';
-// import \'react-toastify/dist/ReactToastify.css\';
+// import { useState, useEffect, useCallback } from 'react';
+// import { toast } from 'react-toastify';
+// import 'react-toastify/dist/ReactToastify.css';
 
 // interface Reminder {
 //   id: number;
@@ -12,6 +12,7 @@
 //   remind_before: number;
 //   remind_unit: string;
 //   user_email: string;
+//    phoneNumber: string | null;
 //   is_sent: boolean;
 // }
 
@@ -24,12 +25,13 @@
   
 //   // Form state
 //   const [formData, setFormData] = useState({
-//     title: \'\',
-//     description: \'\',
-//     dueDate: \'\',
+//     title: '',
+//     description: '',
+//     dueDate: '',
 //     remindBefore: 1,
-//     remindUnit: \'days\',
-//     userEmail: \'\'
+//     remindUnit: 'days',
+//     userEmail: '',
+//     phoneNumber: ''
 //   });
 
 //   // Initial load effect - direct fetch, no callback needed
@@ -37,11 +39,16 @@
 //     const loadReminders = async () => {
 //       setLoading(true);
 //       try {
-//         const response = await fetch(\'/api/reminders/getAll\');
-//         const data = await response.json();
-//         setReminders(data);
+//     const response = await fetch('/api/reminders/getAll');
+//     const data = await response.json();
+//     if (Array.isArray(data)) {
+//       setReminders(data);
+//     } else {
+//       console.error('Invalid data from API:', data);
+//       setReminders([]);
+//     }
 //       } catch (error) {
-//         console.error(\'Error fetching reminders:\', error);
+//         console.error('Error fetching reminders:', error);
 //       } finally {
 //         setLoading(false);
 //       }
@@ -53,132 +60,268 @@
 //   // Separate refetch for event handlers (stable)
 //   const refetch = useCallback(async () => {
 //     try {
-//       const response = await fetch(\'/api/reminders/getAll\');
+//       const response = await fetch('/api/reminders/getAll');
 //       const data = await response.json();
-//       setReminders(data);
+//       if (Array.isArray(data)) {
+//         setReminders(data);
+//       } else {
+//         console.error('Invalid data from API:', data);
+//         setReminders([]);
+//       }
 //     } catch (error) {
-//       console.error(\'Error refetching reminders:\', error);
+//       console.error('Error refetching reminders:', error);
 //     }
 //   }, []);
 
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
+//   // const handleSubmit = async (e: React.FormEvent) => {
+//   //   e.preventDefault();
     
-//     try {
-//       const response = await fetch(\'/api/reminders/create\', {
-//         method: \'POST\',
-//         headers: {
-//           \'Content-Type\': \'application/json\',
-//         },
-//         body: JSON.stringify(formData),
-//       });
+//   //   try {
+//   //     const response = await fetch('/api/reminders/create', {
+//   //       method: 'POST',
+//   //       headers: {
+//   //         'Content-Type': 'application/json',
+//   //       },
+//   //      body: JSON.stringify({
+//   //       ...formData,
+//   //       dueDate: formData.dueDate, // Send the raw local string
+//   //       phoneNumber: formData.phoneNumber || null
+//   //     }),
+//   //     });
 
-//       if (response.ok) {
-//         // Reset form and refresh list
-//         resetForm();
-//         setShowForm(false);
-//         refetch();
-//         toast.success(\'Reminder added successfully!\');
-//       } else {
-//         const error = await response.json();
-//         toast.error(`Error: ${error.error}`);
-//       }
-//     } catch (error) {
-//       console.error(\'Error adding reminder:\', error);
-//       toast.error(\'Failed to add reminder\');
+//   //     if (response.ok) {
+//   //       // Reset form and refresh list
+//   //       resetForm();
+//   //       setShowForm(false);
+//   //       refetch();
+//   //       toast.success('Reminder added successfully!');
+//   //     } else {
+//   //       const error = await response.json();
+//   //       toast.error(`Error: ${error.error}`);
+//   //     }
+//   //   } catch (error) {
+//   //     console.error('Error adding reminder:', error);
+//   //     toast.error('Failed to add reminder');
+//   //   }
+//   // };
+
+//  const handleSubmit = async (e: React.FormEvent) => {
+//   e.preventDefault();
+  
+//   try {
+//     // Convert local datetime-local value to UTC ISO string
+//     const localDate = new Date(formData.dueDate);
+//     const utcDueDate = new Date(localDate.getTime() - (localDate.getTimezoneOffset() * 60000)).toISOString();
+    
+//     const response = await fetch('/api/reminders/create', {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         ...formData,
+//         dueDate: utcDueDate, // Send UTC to backend
+//         phoneNumber: formData.phoneNumber || null
+//       }),
+//     });
+
+//     if (response.ok) {
+//       resetForm();
+//       setShowForm(false);
+//       refetch();
+//       toast.success('Reminder added successfully!');
+//     } else {
+//       const error = await response.json();
+//       toast.error(`Error: ${error.error}`);
 //     }
-//   };
+//   } catch (error) {
+//     console.error('Error adding reminder:', error);
+//     toast.error('Failed to add reminder');
+//   }
+// };
 
-//   const handleEditClick = async (reminder: Reminder) => {
-//     try {
-//       // Fetch latest single reminder for accurate data
-//       const response = await fetch(`/api/reminders?id=${reminder.id}\`);
-//       const latestReminder = await response.json();
+
+
+//   // const handleEditClick = async (reminder: Reminder) => {
+//   //   try {
+//   //     // Fetch latest single reminder for accurate data
+//   //     const response = await fetch(`/api/reminders?id=${reminder.id}`);
+//   //     if (!response.ok) {
+//   //       const errorText = await response.text();
+//   //       throw new Error(`Failed to fetch reminder: ${response.status} ${errorText}`);
+//   //     }
+//   //     const latestReminder = await response.json();
       
-//       setEditingReminder(latestReminder);
-//       setFormData({
-//         title: latestReminder.title,
-//         description: latestReminder.description,
-//         dueDate: latestReminder.due_date.slice(0, 16), // Format for datetime-local
-//         remindBefore: latestReminder.remind_before,
-//         remindUnit: latestReminder.remind_unit,
-//         userEmail: latestReminder.user_email
-//       });
-//       setShowEditForm(true);
-//     } catch (error) {
-//       console.error(\'Error loading reminder for edit:\', error);
-//       toast.error(\'Failed to load reminder\');
-//     }
-//   };
+//   //     setEditingReminder(latestReminder);
+//   //     setFormData({
+//   //       title: latestReminder.title,
+//   //       description: latestReminder.description,
+//   //       // Since we now treat DB as wall-clock UTC, just slice it
+//   //       dueDate: latestReminder.due_date.slice(0, 16),
+//   //       remindBefore: latestReminder.remind_before,
+//   //       remindUnit: latestReminder.remind_unit,
+//   //       userEmail: latestReminder.user_email,
+//   //       phoneNumber: latestReminder.phoneNumber || ''
+//   //     });
+//   //     setShowEditForm(true);
+//   //   } catch (error) {
+//   //     console.error('Error loading reminder for edit:', error);
+//   //     toast.error('Failed to load reminder');
+//   //   }
+//   // };
 
-//   const handleUpdateSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
+//   // const handleUpdateSubmit = async (e: React.FormEvent) => {
+//   //   e.preventDefault();
     
-//     if (!editingReminder) return;
+//   //   if (!editingReminder) return;
 
-//     try {
-//       const response = await fetch(\'/api/reminders/update\', {
-//         method: \'PUT\',
-//         headers: {
-//           \'Content-Type\': \'application/json\',
-//         },
-//         body: JSON.stringify({
-//           ...formData,
-//           id: editingReminder.id,
-//           dueDate: formData.dueDate // backend expects dueDate
-//         }),
-//       });
+//   //   try {
+//   //     const response = await fetch('/api/reminders/update', {
+//   //       method: 'PUT',
+//   //       headers: {
+//   //         'Content-Type': 'application/json',
+//   //       },
+//   //       body: JSON.stringify({
+//   //         ...formData,
+//   //         id: editingReminder.id,
+//   //         dueDate: formData.dueDate // Send the raw local string
+//   //       }),
+//   //     });
 
-//       if (response.ok) {
-//         resetForm();
-//         setEditingReminder(null);
-//         setShowEditForm(false);
-//         refetch();
-//         toast.success(\'Reminder updated successfully!\');
-//       } else {
-//         const error = await response.json();
-//         toast.error(`Error: ${error.error}`);
-//       }
-//     } catch (error) {
-//       console.error(\'Error updating reminder:\', error);
-//       toast.error(\'Failed to update reminder\');
+//   //     if (response.ok) {
+//   //       resetForm();
+//   //       setEditingReminder(null);
+//   //       setShowEditForm(false);
+//   //       refetch();
+//   //       toast.success('Reminder updated successfully!');
+//   //     } else {
+//   //       const error = await response.json();
+//   //       toast.error(`Error: ${error.error}`);
+//   //     }
+//   //   } catch (error) {
+//   //     console.error('Error updating reminder:', error);
+//   //     toast.error('Failed to update reminder');
+//   //   }
+//   // };
+
+// const handleEditClick = async (reminder: Reminder) => {
+//   try {
+//     const response = await fetch(`/api/reminders?id=${reminder.id}`);
+//     if (!response.ok) {
+//       const errorText = await response.text();
+//       throw new Error(`Failed to fetch reminder: ${response.status} ${errorText}`);
 //     }
-//   };
+//     const latestReminder = await response.json();
+    
+//     setEditingReminder(latestReminder);
+    
+//     // Convert UTC database time to local datetime-local format
+//     const utcDate = new Date(latestReminder.due_date);
+//     const localDateString = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000))
+//       .toISOString()
+//       .slice(0, 16);
+    
+//     setFormData({
+//       title: latestReminder.title,
+//       description: latestReminder.description,
+//       dueDate: localDateString,
+//       remindBefore: latestReminder.remind_before,
+//       remindUnit: latestReminder.remind_unit,
+//       userEmail: latestReminder.user_email,
+//       phoneNumber: latestReminder.phoneNumber || ''
+//     });
+//     setShowEditForm(true);
+//   } catch (error) {
+//     console.error('Error loading reminder for edit:', error);
+//     toast.error('Failed to load reminder');
+//   }
+// };
+// const handleUpdateSubmit = async (e: React.FormEvent) => {
+//   e.preventDefault();
+  
+//   if (!editingReminder) return;
+
+//   try {
+//     // Convert local datetime-local value to UTC ISO string
+//     const localDate = new Date(formData.dueDate);
+//     const utcDueDate = new Date(localDate.getTime() - (localDate.getTimezoneOffset() * 60000)).toISOString();
+    
+//     const response = await fetch('/api/reminders/update', {
+//       method: 'PUT',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         ...formData,
+//         id: editingReminder.id,
+//         dueDate: utcDueDate // Send UTC to backend
+//       }),
+//     });
+
+//     if (response.ok) {
+//       resetForm();
+//       setEditingReminder(null);
+//       setShowEditForm(false);
+//       refetch();
+//       toast.success('Reminder updated successfully!');
+//     } else {
+//       const error = await response.json();
+//       toast.error(`Error: ${error.error}`);
+//     }
+//   } catch (error) {
+//     console.error('Error updating reminder:', error);
+//     toast.error('Failed to update reminder');
+//   }
+// };
 
 //   const resetForm = () => {
 //     setFormData({
-//       title: \'\',
-//       description: \'\',
-//       dueDate: \'\',
+//       title: '',
+//       description: '',
+//       dueDate: '',
 //       remindBefore: 1,
-//       remindUnit: \'days\',
-//       userEmail: \'\'
+//       remindUnit: 'days',
+//       userEmail: '',
+//       phoneNumber: ''
 //     });
 //   };
 
 //   const handleDelete = async (id: number) => {
-//   if (!confirm(\'Are you sure you want to delete this reminder?\')) return;
-  
-//   try {
-//     const response = await fetch(`/api/reminders/delete?id=${id}\`, {
-//       method: \'DELETE\',
-//     });
+//     if (!confirm('Are you sure you want to delete this reminder?')) return;
+    
+//     try {
+//       const response = await fetch(`/api/reminders/delete?id=${id}`, {
+//         method: 'DELETE',
+//       });
 
 //     if (response.ok) {
-//       refetch(); // ✅ ADD THIS LINE - Refresh the list after deletion
-//       toast.success(\'Reminder deleted successfully!\');
+//       refetch();
+//       toast.success('Reminder deleted successfully!');
 //     } else {
-//       toast.error(\'Failed to delete reminder\');
+//       toast.error('Failed to delete reminder');
 //     }
-//   } catch (error) {
-//     console.error(\'Error deleting reminder:\', error);
-//     toast.error(\'Failed to delete reminder\');
-//   }
-// };
+//     } catch (error) {
+//       console.error('Error deleting reminder:', error);
+//       toast.error('Failed to delete reminder');
+//     }
+//   };
+
+//   // const formatDate = (dateString: string) => {
+//   //   return new Date(dateString).toLocaleString();
+//   // };
 
 //   const formatDate = (dateString: string) => {
-//     return new Date(dateString).toLocaleString();
-//   };
+//   // Parse the UTC date string from database
+//   const utcDate = new Date(dateString);
+  
+//   // Check if date is valid
+//   if (isNaN(utcDate.getTime())) {
+//     return dateString;
+//   }
+  
+//   // Convert UTC to local time for display
+//   return utcDate.toLocaleString();
+// };
 
 //   const getReminderText = (reminder: Reminder) => {
 //     return `Remind ${reminder.remind_before} ${reminder.remind_unit} before due date`;
@@ -215,7 +358,7 @@
 //         {showForm && (
 //           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
 //             <h2 className="text-xl font-semibold mb-4">Add New Reminder</h2>
-//              <form onSubmit={handleSubmit}>
+//             <form onSubmit={handleSubmit}>
 //               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 //                 <div>
 //                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -270,6 +413,20 @@
 //                     placeholder="Additional details"
 //                   />
 //                 </div>
+                
+//                  <div>
+//                 <label className="block text-sm font-medium text-gray-700 mb-1">
+//                   Phone Number (for SMS - optional)
+//                 </label>
+//                 <input 
+//                   type="tel"
+//                   className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+//                   placeholder="e.g., +1234567890 or 0712345678" 
+//                   value={formData.phoneNumber} 
+//                   onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
+//                 />
+//                 <p className="text-sm text-gray-500 mt-2">Include country code for SMS notifications</p>
+//               </div>
 
 //                 <div>
 //                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -379,6 +536,20 @@
 //                 </div>
 
 //                 <div>
+//                 <label className="block text-sm font-medium text-gray-700 mb-1">
+//                   Phone Number (for SMS - optional)
+//                 </label>
+//                 <input 
+//                   type="tel"
+//                   className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+//                   placeholder="e.g., +1234567890 or 0712345678" 
+//                   value={formData.phoneNumber} 
+//                   onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
+//                 />
+//                 <p className="text-sm text-gray-500 mt-2">Include country code for SMS notifications</p>
+//               </div>
+
+//                 <div>
 //                   <label className="block text-sm font-medium text-gray-700 mb-1">
 //                     Remind Me
 //                   </label>
@@ -439,30 +610,13 @@
 //           </div>
 
 //           {reminders.length === 0 ? (
-//             <form className="p-12 text-center text-gray-500">
-//               <p className="text-lg">No reminders yet</p>
-//               <p className="text-sm mt-2">Click the "Add Reminder" button to create one</p>
-//             </form>
-//           </div>
-//         )}
-
-//         {/* Reminders List */}
-//         <div className="bg-white rounded-lg shadow-sm">
-//           <div className="p-6 border-b">
-//             <h2 className="text-xl font-semibold">Your Reminders</h2>
-//             <p className="text-gray-600 text-sm mt-1">
-//               {reminders.length} reminder{reminders.length !== 1 ? 's' : ''} total
-//             </p>
-//           </div>
-
-//           {reminders.length === 0 ? (
 //             <div className="p-12 text-center text-gray-500">
 //               <p className="text-lg">No reminders yet</p>
 //               <p className="text-sm mt-2">Click the &quot;Add Reminder&quot; button to create one</p>
 //             </div>
 //           ) : (
 //             <div className="divide-y">
-//               {reminders.map((reminder) => (
+//               {(Array.isArray(reminders) ? reminders : []).map((reminder) => (
 //                 <div key={reminder.id} className="p-6 hover:bg-gray-50 transition">
 //                   <div className="flex justify-between items-start">
 //                     <div className="flex-1">
@@ -537,7 +691,7 @@ interface Reminder {
   remind_before: number;
   remind_unit: string;
   user_email: string;
-   phoneNumber: string | null;
+  phoneNumber: string | null;
   is_sent: boolean;
 }
 
@@ -564,14 +718,14 @@ export default function Home() {
     const loadReminders = async () => {
       setLoading(true);
       try {
-    const response = await fetch('/api/reminders/getAll');
-    const data = await response.json();
-    if (Array.isArray(data)) {
-      setReminders(data);
-    } else {
-      console.error('Invalid data from API:', data);
-      setReminders([]);
-    }
+        const response = await fetch('/api/reminders/getAll');
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setReminders(data);
+        } else {
+          console.error('Invalid data from API:', data);
+          setReminders([]);
+        }
       } catch (error) {
         console.error('Error fetching reminders:', error);
       } finally {
@@ -580,7 +734,7 @@ export default function Home() {
     };
 
     loadReminders();
-  }, []); // Empty deps: run once on mount
+  }, []);
 
   // Separate refetch for event handlers (stable)
   const refetch = useCallback(async () => {
@@ -598,6 +752,7 @@ export default function Home() {
     }
   }, []);
 
+  // Simple submit - send the local datetime string as-is
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -607,14 +762,14 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-       body: JSON.stringify({
-        ...formData,
-        phoneNumber: formData.phoneNumber || null
-      }),
+        body: JSON.stringify({
+          ...formData,
+          dueDate: formData.dueDate, // Send the raw local string
+          phoneNumber: formData.phoneNumber || null
+        }),
       });
 
       if (response.ok) {
-        // Reset form and refresh list
         resetForm();
         setShowForm(false);
         refetch();
@@ -629,9 +784,9 @@ export default function Home() {
     }
   };
 
+  // For editing: just use the due_date as-is from the database
   const handleEditClick = async (reminder: Reminder) => {
     try {
-      // Fetch latest single reminder for accurate data
       const response = await fetch(`/api/reminders?id=${reminder.id}`);
       if (!response.ok) {
         const errorText = await response.text();
@@ -640,10 +795,13 @@ export default function Home() {
       const latestReminder = await response.json();
       
       setEditingReminder(latestReminder);
+      
+      // Simply slice the UTC string to get YYYY-MM-DDThh:mm format
+      // The backend handles UTC conversion, we just display what's stored
       setFormData({
         title: latestReminder.title,
         description: latestReminder.description,
-        dueDate: latestReminder.due_date.slice(0, 16), // Format for datetime-local
+        dueDate: latestReminder.due_date.slice(0, 16),
         remindBefore: latestReminder.remind_before,
         remindUnit: latestReminder.remind_unit,
         userEmail: latestReminder.user_email,
@@ -656,6 +814,7 @@ export default function Home() {
     }
   };
 
+  // Simple update - send the local datetime string as-is
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -670,7 +829,7 @@ export default function Home() {
         body: JSON.stringify({
           ...formData,
           id: editingReminder.id,
-          dueDate: formData.dueDate // backend expects dueDate
+          dueDate: formData.dueDate // Send the raw local string
         }),
       });
 
@@ -710,12 +869,12 @@ export default function Home() {
         method: 'DELETE',
       });
 
-    if (response.ok) {
-      refetch();
-      toast.success('Reminder deleted successfully!');
-    } else {
-      toast.error('Failed to delete reminder');
-    }
+      if (response.ok) {
+        refetch();
+        toast.success('Reminder deleted successfully!');
+      } else {
+        toast.error('Failed to delete reminder');
+      }
     } catch (error) {
       console.error('Error deleting reminder:', error);
       toast.error('Failed to delete reminder');
@@ -723,7 +882,11 @@ export default function Home() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+    const utcDate = new Date(dateString);
+    if (isNaN(utcDate.getTime())) {
+      return dateString;
+    }
+    return utcDate.toLocaleString();
   };
 
   const getReminderText = (reminder: Reminder) => {
@@ -817,19 +980,19 @@ export default function Home() {
                   />
                 </div>
                 
-                 <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number (for SMS - optional)
-                </label>
-                <input 
-                  type="tel"
-                  className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                  placeholder="e.g., +1234567890 or 0712345678" 
-                  value={formData.phoneNumber} 
-                  onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
-                />
-                <p className="text-sm text-gray-500 mt-2">Include country code for SMS notifications</p>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number (for SMS - optional)
+                  </label>
+                  <input 
+                    type="tel"
+                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    placeholder="e.g., +1234567890 or 0712345678" 
+                    value={formData.phoneNumber} 
+                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
+                  />
+                  <p className="text-sm text-gray-500 mt-2">Include country code for SMS notifications</p>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -939,18 +1102,18 @@ export default function Home() {
                 </div>
 
                 <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number (for SMS - optional)
-                </label>
-                <input 
-                  type="tel"
-                  className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                  placeholder="e.g., +1234567890 or 0712345678" 
-                  value={formData.phoneNumber} 
-                  onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
-                />
-                <p className="text-sm text-gray-500 mt-2">Include country code for SMS notifications</p>
-              </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number (for SMS - optional)
+                  </label>
+                  <input 
+                    type="tel"
+                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    placeholder="e.g., +1234567890 or 0712345678" 
+                    value={formData.phoneNumber} 
+                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
+                  />
+                  <p className="text-sm text-gray-500 mt-2">Include country code for SMS notifications</p>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
