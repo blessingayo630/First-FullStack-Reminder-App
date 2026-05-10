@@ -757,6 +757,11 @@ export default function Home() {
     e.preventDefault();
     
     try {
+      // Convert the local datetime-local value to a proper UTC ISO string
+      // new Date() with the datetime-local string (YYYY-MM-DDTHH:mm) parses it as local time
+      const localDate = new Date(formData.dueDate);
+      const utcDueDate = localDate.toISOString();
+
       const response = await fetch('/api/reminders/create', {
         method: 'POST',
         headers: {
@@ -764,7 +769,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           ...formData,
-          dueDate: formData.dueDate, // Send the raw local string
+          dueDate: utcDueDate, // Send actual UTC ISO string
           phoneNumber: formData.phoneNumber || null
         }),
       });
@@ -796,12 +801,16 @@ export default function Home() {
       
       setEditingReminder(latestReminder);
       
-      // Simply slice the UTC string to get YYYY-MM-DDThh:mm format
-      // The backend handles UTC conversion, we just display what's stored
+      // Convert UTC database time to local datetime-local format (YYYY-MM-DDTHH:mm)
+      const utcDate = new Date(latestReminder.due_date);
+      const localDateString = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000))
+        .toISOString()
+        .slice(0, 16);
+      
       setFormData({
         title: latestReminder.title,
         description: latestReminder.description,
-        dueDate: latestReminder.due_date.slice(0, 16),
+        dueDate: localDateString,
         remindBefore: latestReminder.remind_before,
         remindUnit: latestReminder.remind_unit,
         userEmail: latestReminder.user_email,
@@ -821,6 +830,10 @@ export default function Home() {
     if (!editingReminder) return;
 
     try {
+      // Convert the local datetime-local value to a proper UTC ISO string
+      const localDate = new Date(formData.dueDate);
+      const utcDueDate = localDate.toISOString();
+
       const response = await fetch('/api/reminders/update', {
         method: 'PUT',
         headers: {
@@ -829,7 +842,7 @@ export default function Home() {
         body: JSON.stringify({
           ...formData,
           id: editingReminder.id,
-          dueDate: formData.dueDate // Send the raw local string
+          dueDate: utcDueDate // Send actual UTC ISO string
         }),
       });
 
@@ -886,6 +899,7 @@ export default function Home() {
     if (isNaN(utcDate.getTime())) {
       return dateString;
     }
+    // Convert the UTC date string from database to user's local time for display
     return utcDate.toLocaleString();
   };
 

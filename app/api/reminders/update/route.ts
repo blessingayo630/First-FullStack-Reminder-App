@@ -155,16 +155,16 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // ✅ Treat the input as LOCAL time (not UTC)
-    const localDueDate = new Date(dueDate);
+    // Treat the input as a Date object.
+    const dueDateObj = new Date(dueDate);
     
     // Check if the date is valid
-    if (isNaN(localDueDate.getTime())) {
+    if (isNaN(dueDateObj.getTime())) {
       return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
     }
     
-    // Calculate reminder time based on the due date (in local time)
-    const reminderTime = new Date(localDueDate);
+    // Calculate reminder time based on the due date
+    const reminderTime = new Date(dueDateObj);
     switch (remindUnit) {
       case 'minutes': 
         reminderTime.setMinutes(reminderTime.getMinutes() - remindBefore); 
@@ -186,10 +186,10 @@ export async function PUT(request: Request) {
     const updateData = {
       title,
       description: description || '',
-      due_date: localDueDate.toISOString(), // Convert local to UTC for storage
+      due_date: dueDateObj.toISOString(), // Store as UTC
       remind_before: remindBefore,
       remind_unit: remindUnit,
-      reminder_time: reminderTime.toISOString(), // Convert local to UTC for storage
+      reminder_time: reminderTime.toISOString(), // Store as UTC
       user_email: userEmail || 'temp@example.com',
     };
 
