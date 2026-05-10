@@ -55,6 +55,8 @@
 //   }
 // }
 
+// ✅ ADD THIS AS THE VERY FIRST LINE - Force timezone to Africa/Lagos
+process.env.TZ = 'Africa/Lagos';
 
 // app/api/cron/route.ts
 import { NextResponse } from 'next/server';
