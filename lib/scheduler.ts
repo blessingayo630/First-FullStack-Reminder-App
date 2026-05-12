@@ -191,6 +191,6 @@ export async function manualCheck() {
   await checkAndSendReminders();
 }
 
-// Note: Scheduler functionality is now handled server-side via /api/scheduler or /api/cron
-// Use Vercel Cron Jobs or external cron service to call these endpoints regularly
+// Note: Scheduler functionality is now handled server-side via /api/cron
+// Use Vercel Cron Jobs or external cron service to call this endpoint regularly
 
