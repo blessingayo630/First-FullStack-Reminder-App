@@ -78,22 +78,27 @@ export async function GET(request: Request) {
   try {
     console.log('🕐 Cron job: Checking for due reminders...');
 
-    const now = new Date();
-    const currentUTCString = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')} ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}:${String(now.getUTCSeconds()).padStart(2, '0')}`;
+    // Use ISO string for consistent comparison with stored dates
+    const nowISO = new Date().toISOString();
 
     const { data: reminders, error } = await supabase
       .from('reminders')
       .select('*')
-      .lte('reminder_time', currentUTCString)
+      .lte('reminder_time', nowISO)
       .eq('is_sent', false);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase query error:', error);
+      throw error;
+    }
 
     let sent = 0;
     for (const reminder of reminders || []) {
+      console.log(`📧 Attempting to send email to ${reminder.user_email} for reminder ${reminder.id}`);
+      
       // Send email using Resend
       const { data, error: emailError } = await resend.emails.send({
-        from: 'Reminder App <onboarding@resend.dev>', // This is a default Resend sender
+        from: 'Reminder App <onboarding@resend.dev>',
         to: [reminder.user_email],
         subject: `🔔 REMINDER: ${reminder.title}`,
         html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
@@ -104,11 +109,21 @@ export async function GET(request: Request) {
       });
 
       if (!emailError) {
-        await supabase.from('reminders').update({ is_sent: true }).eq('id', reminder.id);
-        sent++;
-        console.log(`✅ Email sent for reminder ${reminder.id}`);
+        const { error: updateError } = await supabase
+          .from('reminders')
+          .update({ is_sent: true })
+          .eq('id', reminder.id);
+        
+        if (updateError) {
+          console.error(`❌ Failed to update is_sent for reminder ${reminder.id}:`, updateError);
+        } else {
+          sent++;
+          console.log(`✅ Email sent and marked as sent for reminder ${reminder.id}`);
+        }
       } else {
-        console.error(`❌ Failed to send email for reminder ${reminder.id}:`, emailError);
+        console.error(`❌ Resend Error for reminder ${reminder.id}:`, JSON.stringify(emailError));
+        // Common Resend error: "To send emails to this recipient, you must first verify a domain..."
+        // This happens if sending to an email that isn't the account owner on a free plan.
       }
     }
 

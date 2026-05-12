@@ -1,7 +1,8 @@
-# TODO
-
-- [x] Inspect reminder create/update APIs and frontend dueDate handling.
-- [x] Fix timezone handling so 11:07 entered in the UI is stored as 11:07 (not shifted by local offset).
-- [ ] Run app locally and verify Create + Update store/display the exact same time value.
-- [ ] (Optional) Validate scheduler firing uses the stored UTC timestamps correctly.
+- [ ] Inspect HomePage.tsx and identify where Edit/Delete buttons are rendered
+- [ ] Implement kebab (3 dots) icon per reminder card
+- [ ] Add dropdown menu with Edit + Delete inside
+- [ ] Add outside-click listener to close the dropdown when clicking anywhere else
+- [ ] Ensure clicking Edit/Delete closes the dropdown
+- [ ] Remove old inline Edit/Delete buttons
+- [ ] Run lint/build or dev to verify
 

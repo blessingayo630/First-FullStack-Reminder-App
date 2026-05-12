@@ -154,10 +154,15 @@ export async function POST(request: Request) {
     // If it's a local string, it will be parsed as local time.
     const dueDateObj = new Date(dueDate);
     
+
+
     // Check if the date is valid
     if (isNaN(dueDateObj.getTime())) {
       return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
     }
+
+    console.log('dueDate from frontend:', dueDate);
+console.log('dueDateObj parsed:', dueDateObj.toISOString());
     
     // Calculate reminder time based on the due date
     const reminderTime = new Date(dueDateObj);
