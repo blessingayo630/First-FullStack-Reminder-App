@@ -5,7 +5,6 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Loading from './Loading';
 
-
 interface Reminder {
   id: number;
   title: string;
@@ -24,7 +23,7 @@ export default function Home() {
   const [showForm, setShowForm] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     title: '',
@@ -33,7 +32,7 @@ export default function Home() {
     remindBefore: 1,
     remindUnit: 'days',
     userEmail: '',
-    phoneNumber: ''
+    phoneNumber: '',
   });
 
   // Initial load effect - direct fetch, no callback needed
@@ -123,14 +122,12 @@ export default function Home() {
     };
   }, []);
 
-
   // Simple submit - send the local datetime string as-is
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       // Correctly convert local datetime to UTC ISO string
-      // new Date(string) uses the user's browser timezone
       const date = new Date(formData.dueDate);
       if (isNaN(date.getTime())) {
         toast.error('Invalid date');
@@ -146,7 +143,7 @@ export default function Home() {
         body: JSON.stringify({
           ...formData,
           dueDate: utcDueDate, // Send actual UTC ISO string
-          phoneNumber: formData.phoneNumber || null
+          phoneNumber: formData.phoneNumber || null,
         }),
       });
 
@@ -174,13 +171,15 @@ export default function Home() {
         throw new Error(`Failed to fetch reminder: ${response.status} ${errorText}`);
       }
       const latestReminder = await response.json();
-      
+
       setEditingReminder(latestReminder);
-      
+
       // Convert UTC ISO string from database to local datetime-local format (YYYY-MM-DDTHH:mm)
       const date = new Date(latestReminder.due_date);
-      const localDateString = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-      
+      const localDateString = new Date(
+        date.getTime() - date.getTimezoneOffset() * 60000
+      ).toISOString().slice(0, 16);
+
       setFormData({
         title: latestReminder.title,
         description: latestReminder.description,
@@ -188,7 +187,7 @@ export default function Home() {
         remindBefore: latestReminder.remind_before,
         remindUnit: latestReminder.remind_unit,
         userEmail: latestReminder.user_email,
-        phoneNumber: latestReminder.phoneNumber || ''
+        phoneNumber: latestReminder.phoneNumber || '',
       });
       setShowEditForm(true);
     } catch (error) {
@@ -200,7 +199,7 @@ export default function Home() {
   // Simple update - send the local datetime string as-is
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!editingReminder) return;
 
     try {
@@ -220,7 +219,7 @@ export default function Home() {
         body: JSON.stringify({
           ...formData,
           id: editingReminder.id,
-          dueDate: utcDueDate // Send actual UTC ISO string
+          dueDate: utcDueDate, // Send actual UTC ISO string
         }),
       });
 
@@ -248,16 +247,14 @@ export default function Home() {
       remindBefore: 1,
       remindUnit: 'days',
       userEmail: '',
-      phoneNumber: ''
+      phoneNumber: '',
     });
   };
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [openMenuForId, setOpenMenuForId] = useState<number | null>(null);
 
-
   const handleDelete = async (id: number) => {
-    // Prevent double-clicks
     if (deletingId === id) return;
 
     setDeletingId(id);
@@ -302,7 +299,6 @@ export default function Home() {
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // If click happens inside an open reminder menu container, don't close.
       const menuContainer = target.closest('[data-reminder-menu="true"]');
       if (menuContainer) return;
 
@@ -317,70 +313,63 @@ export default function Home() {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    
-    // Convert UTC from database to user's local time for display
+
     const date = new Date(dateString);
-    return date.toLocaleString('en-GB', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).replace(',', '');
+    return date
+      .toLocaleString('en-GB', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+      .replace(',', '');
   };
 
   const getReminderText = (reminder: Reminder) => {
     return `Remind ${reminder.remind_before} ${reminder.remind_unit} before due date`;
   };
 
-  // if (loading) {
-  //   return (
-  //     <div className="flex items-center justify-center min-h-screen">
-  //       <div className="text-xl">Loading reminders...</div>
-  //     </div>
-  //   );
-  // }
-
-if (loading) {
-  return <Loading />;
-}
-
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
-    <div className="min-h-screen bg-white py-8">
+    <div className="min-h-screen py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="card-neon rounded-lg p-6 mb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">⏰ Reminder App</h1>
-              <p className="text-gray-600 mt-2 text-sm sm:text-base">Never miss important events or payments again</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                ⏰ Reminder App
+              </h1>
+              <p className="text-white/60 mt-2 text-sm sm:text-base">
+                Never miss important events or payments again
+              </p>
             </div>
             <button
               onClick={() => setShowForm(!showForm)}
-              className={`${showForm ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6`}
+              className={`${showForm ? 'alarm-btn alarm-btn--danger' : 'alarm-btn alarm-btn--primary'} cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6`}
             >
               {showForm ? 'Cancel' : '+ Add Reminder'}
             </button>
           </div>
         </div>
 
-
         {/* Add Reminder Form */}
         {showForm && (
           <div className="card-neon rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Add New Reminder</h2>
+            <h2 className="text-xl font-semibold mb-4 text-white/90">Add New Reminder</h2>
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title *
-                  </label>
+                  <label className="block text-sm font-medium text-white/70 mb-1">Title *</label>
                   <input
                     type="text"
                     required
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="alarm-input"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="e.g., Pay electricity bill"
@@ -388,13 +377,11 @@ if (loading) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Email *
-                  </label>
+                  <label className="block text-sm font-medium text-white/70 mb-1">Your Email *</label>
                   <input
                     type="email"
                     required
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="alarm-input"
                     value={formData.userEmail}
                     onChange={(e) => setFormData({ ...formData, userEmail: e.target.value })}
                     placeholder="you@example.com"
@@ -402,60 +389,58 @@ if (loading) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white/70 mb-1">
                     Due Date & Time *
                   </label>
                   <input
                     type="datetime-local"
                     required
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="alarm-input"
                     value={formData.dueDate}
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white/70 mb-1">
                     Description (Optional)
                   </label>
                   <input
                     type="text"
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="alarm-input"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Additional details"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white/70 mb-1">
                     Phone Number (for SMS - optional)
                   </label>
-                  <input 
+                  <input
                     type="tel"
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    placeholder="e.g., +1234567890 or 0712345678" 
-                    value={formData.phoneNumber} 
-                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
+                    className="alarm-input"
+                    placeholder="e.g., +1234567890 or 0712345678"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                   />
-                  <p className="text-sm text-gray-500 mt-2">Include country code for SMS notifications</p>
+                  <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Remind Me
-                  </label>
+                  <label className="block text-sm font-medium text-white/70 mb-1">Remind Me</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
                       min="1"
                       required
-                      className="w-24 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-24 alarm-input"
                       value={formData.remindBefore}
                       onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
                     />
                     <select
-                      className="flex-1 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 alarm-input"
                       value={formData.remindUnit}
                       onChange={(e) => setFormData({ ...formData, remindUnit: e.target.value })}
                     >
@@ -470,24 +455,20 @@ if (loading) {
               </div>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="submit"
-                  className="bg-green-500 hover:bg-green-600 cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
-                >
+                <button type="submit" className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6">
                   Create Reminder
                 </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setShowForm(false);
-                    }}
-                    className="bg-red-500 hover:bg-red-600 cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
-                  >
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setShowForm(false);
+                  }}
+                  className="alarm-btn alarm-btn--danger cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
+                >
                   Cancel
                 </button>
               </div>
-
             </form>
           </div>
         )}
@@ -495,89 +476,81 @@ if (loading) {
         {/* Edit Reminder Form */}
         {showEditForm && editingReminder && (
           <div className="card-neon rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Edit Reminder</h2>
+            <h2 className="text-xl font-semibold mb-4 text-white/90">Edit Reminder</h2>
             <form onSubmit={handleUpdateSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title *
-                  </label>
+                  <label className="block text-sm font-medium text-white/70 mb-1">Title *</label>
                   <input
                     type="text"
                     required
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="alarm-input"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Email *
-                  </label>
+                  <label className="block text-sm font-medium text-white/70 mb-1">Your Email *</label>
                   <input
                     type="email"
                     required
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="alarm-input"
                     value={formData.userEmail}
                     onChange={(e) => setFormData({ ...formData, userEmail: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Due Date & Time *
-                  </label>
+                  <label className="block text-sm font-medium text-white/70 mb-1">Due Date & Time *</label>
                   <input
                     type="datetime-local"
                     required
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="alarm-input"
                     value={formData.dueDate}
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white/70 mb-1">
                     Description (Optional)
                   </label>
                   <input
                     type="text"
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="alarm-input"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white/70 mb-1">
                     Phone Number (for SMS - optional)
                   </label>
-                  <input 
+                  <input
                     type="tel"
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    placeholder="e.g., +1234567890 or 0712345678" 
-                    value={formData.phoneNumber} 
-                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
+                    className="alarm-input"
+                    placeholder="e.g., +1234567890 or 0712345678"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                   />
-                  <p className="text-sm text-gray-500 mt-2">Include country code for SMS notifications</p>
+                  <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Remind Me
-                  </label>
+                  <label className="block text-sm font-medium text-white/70 mb-1">Remind Me</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
                       min="1"
                       required
-                      className="w-24 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-24 alarm-input"
                       value={formData.remindBefore}
                       onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
                     />
                     <select
-                      className="flex-1 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 alarm-input"
                       value={formData.remindUnit}
                       onChange={(e) => setFormData({ ...formData, remindUnit: e.target.value })}
                     >
@@ -592,65 +565,60 @@ if (loading) {
               </div>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="submit"
-                  className="bg-green-500 hover:bg-green-600 cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
-                >
+                <button type="submit" className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6">
                   Update Reminder
                 </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setEditingReminder(null);
-                      setShowEditForm(false);
-                    }}
-                    className="bg-red-500 hover:bg-red-600 cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setEditingReminder(null);
+                    setShowEditForm(false);
+                  }}
+                  className="alarm-btn alarm-btn--danger cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
                 >
                   Cancel
                 </button>
               </div>
-
             </form>
           </div>
         )}
 
         {/* Reminders List */}
         <div className="card-neon rounded-lg">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">Your Reminders</h2>
-            <p className="text-gray-600 text-sm mt-1">
+          <div className="p-6 border-b border-white/10">
+            <h2 className="text-xl font-semibold text-white">Your Reminders</h2>
+            <p className="text-white/60 text-sm mt-1">
               {reminders.length} reminder{reminders.length !== 1 ? 's' : ''} total
             </p>
           </div>
 
           {reminders.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
+            <div className="p-12 text-center text-white/55">
               <p className="text-lg">No reminders yet</p>
               <p className="text-sm mt-2">Click the &quot;Add Reminder&quot; button to create one</p>
             </div>
           ) : (
-            <div className="divide-y">
-              {(Array.isArray(reminders) ? reminders : []).map((reminder) => (
-                <div key={reminder.id} className="p-6 hover:bg-gray-50 transition">
+            <div className="divide-y divide-white/10">
+              {(Array.isArray(reminders) ? reminders : []).map((reminder, idx) => (
+                <div
+                  key={reminder.id}
+                  className="p-6 alarm-list-item"
+                  style={{ animationDelay: `${Math.min(idx * 60, 420)}ms` }}
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="min-w-0 flex items-center gap-3">
-                          <h3 className="text-lg font-semibold text-gray-800 break-words">
+                          <h3 className="text-lg font-semibold text-white wrap-break-word">
                             {reminder.title}
                           </h3>
                         </div>
 
                         <div className="relative flex items-center justify-end w-full sm:w-auto">
-                          {/* Sent/Pending badge + Desktop/tablet kebab actions (aligned to end) */}
                           <div className="flex items-center gap-2">
                             <span
-                              className={`shrink-0 text-xs px-2 py-1 rounded-full ${
-                                reminder.is_sent
-                                  ? 'bg-green-500 text-white'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}
+                              className={`alarm-badge ${reminder.is_sent ? 'alarm-badge--sent' : 'alarm-badge--pending'}`}
                             >
                               {reminder.is_sent ? 'Sent' : 'Pending'}
                             </span>
@@ -664,15 +632,15 @@ if (loading) {
                                   e.stopPropagation();
                                   setOpenMenuForId((prev) => (prev === reminder.id ? null : reminder.id));
                                 }}
-                                className="inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-pointer hover:bg-gray-100 transition"
+                                className="inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-pointer hover:bg-white/5 transition"
                               >
-                                <span className="text-gray-600 text-xl leading-none">⋮</span>
+                                <span className="text-white/70 text-xl leading-none">⋮</span>
                               </button>
 
                               {openMenuForId === reminder.id && (
                                 <div
                                   data-reminder-menu="true"
-                                  className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-10"
+                                  className="absolute right-0 mt-2 w-32 alarm-dropdown rounded-lg shadow-lg overflow-hidden z-10 border border-white/10"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <button
@@ -681,7 +649,7 @@ if (loading) {
                                       setOpenMenuForId(null);
                                       handleEditClick(reminder);
                                     }}
-                                    className="w-full text-left px-3 py-2 text-sm text-gray-800 cursor-pointer hover:bg-gray-50"
+                                    className="w-full text-left px-3 py-2 text-sm text-white/85 cursor-pointer hover:bg-white/5"
                                   >
                                     Edit
                                   </button>
@@ -694,8 +662,8 @@ if (loading) {
                                     disabled={deletingId === reminder.id}
                                     className={`w-full text-left px-3 py-2 text-sm transition ${
                                       deletingId === reminder.id
-                                        ? 'text-red-300 cursor-not-allowed bg-white'
-                                        : 'text-red-600 cursor-pointer hover:bg-red-50'
+                                        ? 'text-white/25 cursor-not-allowed bg-transparent'
+                                        : 'text-[rgba(255,59,92,0.95)] cursor-pointer hover:bg-[rgba(255,59,92,0.08)]'
                                     }`}
                                   >
                                     Delete
@@ -706,27 +674,19 @@ if (loading) {
                           </div>
                         </div>
                       </div>
-                      
-                      
+
                       {reminder.description && (
-                        <p className="text-gray-600 mb-2">{reminder.description}</p>
+                        <p className="text-white/65 mb-2">{reminder.description}</p>
                       )}
-                      
+
                       <div className="flex flex-wrap gap-3 text-sm">
-                        <span className="text-gray-500">
-                          📅 Due: {formatDate(reminder.due_date)}
-                        </span>
-                        <span className="text-green-600">
-                          ⏰ {getReminderText(reminder)}
-                        </span>
-                        <span className="text-gray-500">
-                          📧 {reminder.user_email}
-                        </span>
+                        <span className="text-white/55">📅 Due: {formatDate(reminder.due_date)}</span>
+                        <span className="text-[rgba(255,176,32,0.95)]">⏰ {getReminderText(reminder)}</span>
+                        <span className="text-white/55">📧 {reminder.user_email}</span>
                       </div>
                     </div>
-                    
+
                     <div className="relative flex items-center">
-                      {/* Mobile actions */}
                       <div className="flex gap-2 sm:hidden">
                         <button
                           type="button"
@@ -735,7 +695,7 @@ if (loading) {
                             setOpenMenuForId(null);
                             handleEditClick(reminder);
                           }}
-                          className="bg-green-500 hover:bg-green-600 cursor-pointer text-white px-3 py-2 rounded-lg transition text-sm"
+                          className="alarm-btn alarm-btn--primary text-white px-3 py-2 rounded-lg transition text-sm"
                         >
                           Edit
                         </button>
@@ -747,19 +707,15 @@ if (loading) {
                             handleDelete(reminder.id);
                           }}
                           disabled={deletingId === reminder.id}
-                          className={`bg-red-500 hover:bg-red-600 cursor-pointer text-white px-3 py-2 rounded-lg transition text-sm ${
-                            deletingId === reminder.id ? 'opacity-60 cursor-not-allowed hover:bg-red-500' : ''
+                          className={`alarm-btn alarm-btn--danger text-white px-3 py-2 rounded-lg transition text-sm ${
+                            deletingId === reminder.id ? 'opacity-60 cursor-not-allowed' : ''
                           }`}
                         >
                           Delete
                         </button>
                       </div>
-
-
                     </div>
-
                   </div>
-
                 </div>
               ))}
             </div>
@@ -769,3 +725,4 @@ if (loading) {
     </div>
   );
 }
+

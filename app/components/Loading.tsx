@@ -2,18 +2,18 @@
 
 export default function Loading() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
+    <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
         <div className="shake-clock mb-4 relative">
           <svg
-            className="w-20 h-20 mx-auto text-gray-700"
+            className="w-20 h-20 mx-auto text-[rgba(255,176,32,0.95)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
           >
             {/* Clock face */}
-            <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="white" />
+            <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="rgba(255,255,255,0.06)" />
 
             {/* Clock hands */}
             <line x1="12" y1="12" x2="9.5" y2="7.5" strokeWidth={1.5} strokeLinecap="round" />
@@ -34,8 +34,8 @@ export default function Loading() {
           <div className="ring-wave"></div>
         </div>
 
-        <p className="text-gray-600 text-lg font-medium">Loading reminders...</p>
-        <p className="text-gray-400 text-sm mt-2">Please wait while we check your schedule</p>
+<p className="text-white/80 text-lg font-medium">Loading reminders...</p>
+        <p className="text-white/45 text-sm mt-2">Please wait while we check your schedule</p>
       </div>
 
       <style jsx>{`
@@ -66,8 +66,8 @@ export default function Loading() {
           width: 100%;
           height: 100%;
           border-radius: 50%;
-          border: 2px solid rgba(75, 85, 99, 0.3);
-          animation: ring 1.5s ease-out infinite;
+          border: 2px solid rgba(255, 176, 32, 0.35);
+          animation: ring 1.35s ease-out infinite;
         }
 
         .ring-wave::after {
@@ -116,4 +116,5 @@ export default function Loading() {
     </div>
   );
 }
+
 
