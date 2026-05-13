@@ -430,12 +430,13 @@ export default function Home() {
 
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1">Remind Me</label>
-                  <div className="flex gap-2">
+                      <div className="flex gap-2">
                     <input
                       type="number"
                       min="1"
                       required
-                      className="w-24 alarm-input"
+                      className="w-16 alarm-input"
+
                       value={formData.remindBefore}
                       onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
                     />
@@ -540,13 +541,14 @@ export default function Home() {
 
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1">Remind Me</label>
-                  <div className="flex gap-2">
+                      <div className="flex gap-2">
                     <input
                       type="number"
                       min="1"
                       required
-                      className="w-24 alarm-input"
+                      className="w-16 alarm-input"
                       value={formData.remindBefore}
+
                       onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
                     />
                     <select
