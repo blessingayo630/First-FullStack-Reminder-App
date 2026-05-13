@@ -129,9 +129,14 @@ export default function Home() {
     e.preventDefault();
     
     try {
-      // Treat the local datetime-local value as UTC to preserve "wall clock" time
-      // This ensures 19:30 stays 19:30 in Supabase and Postman
-      const utcDueDate = formData.dueDate + ':00.000Z';
+      // Correctly convert local datetime to UTC ISO string
+      // new Date(string) uses the user's browser timezone
+      const date = new Date(formData.dueDate);
+      if (isNaN(date.getTime())) {
+        toast.error('Invalid date');
+        return;
+      }
+      const utcDueDate = date.toISOString();
 
       const response = await fetch('/api/reminders/create', {
         method: 'POST',
@@ -172,9 +177,9 @@ export default function Home() {
       
       setEditingReminder(latestReminder);
       
-      // Since we store as UTC but want to show the exact same "wall clock" time, 
-      // we just slice the ISO string to get the date and time parts
-      const localDateString = latestReminder.due_date.slice(0, 16);
+      // Convert UTC ISO string from database to local datetime-local format (YYYY-MM-DDTHH:mm)
+      const date = new Date(latestReminder.due_date);
+      const localDateString = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
       
       setFormData({
         title: latestReminder.title,
@@ -199,8 +204,13 @@ export default function Home() {
     if (!editingReminder) return;
 
     try {
-      // Treat the local datetime-local value as UTC to preserve "wall clock" time
-      const utcDueDate = formData.dueDate + ':00.000Z';
+      // Correctly convert local datetime to UTC ISO string
+      const date = new Date(formData.dueDate);
+      if (isNaN(date.getTime())) {
+        toast.error('Invalid date');
+        return;
+      }
+      const utcDueDate = date.toISOString();
 
       const response = await fetch('/api/reminders/update', {
         method: 'PUT',
@@ -308,9 +318,16 @@ export default function Home() {
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
     
-    // Replace 'T' with space and remove everything after the minutes to show wall clock time
-    // format: YYYY-MM-DD HH:mm
-    return dateString.replace('T', ' ').slice(0, 16);
+    // Convert UTC from database to user's local time for display
+    const date = new Date(dateString);
+    return date.toLocaleString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).replace(',', '');
   };
 
   const getReminderText = (reminder: Reminder) => {

@@ -87,10 +87,7 @@
 //   await checkAndSendReminders();
 // }
 
-import { createClient } from '@supabase/supabase-js';
-import { sendSMSReminder } from './sms';
-import { sendReminderEmail } from './email';
-import { supabase } from './supabase';
+
 // import { sendReminderEmail } from './email';
 // import { sendSMSReminder } from './sms';
 // import cron from 'node-cron';
@@ -99,6 +96,11 @@ import { supabase } from './supabase';
 //   process.env.NEXT_PUBLIC_SUPABASE_URL!,
 //   process.env.SUPABASE_SERVICE_ROLE_KEY!
 // );
+
+import { createClient } from '@supabase/supabase-js';
+import { sendSMSReminder } from './sms';
+import { sendReminderEmail } from './email';
+import { supabase } from './supabase';
 
 interface Reminder {
   id: number;

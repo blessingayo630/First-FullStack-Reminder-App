@@ -26,7 +26,7 @@ export async function sendReminderEmail(reminder: Reminder) {
 
     console.log(`📧 Preparing email for: ${reminder.user_email}`);
 
-    const dueDate = new Date(reminder.due_date).toLocaleString();
+    const dueDate = new Date(reminder.due_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' });
 
     const { error } = await resend.emails.send({
       from: 'Reminder App <onboarding@resend.dev>',

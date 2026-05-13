@@ -57,7 +57,7 @@
 
 // ✅ ADD THIS AS THE VERY FIRST LINE - Force timezone to Africa/Lagos
 process.env.TZ = 'Africa/Lagos';
-
+  
 // app/api/cron/route.ts
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
         html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
                 <h2>🔔 Reminder: ${reminder.title}</h2>
                 ${reminder.description ? `<p>${reminder.description}</p>` : ''}
-                <p><strong>Due:</strong> ${new Date(reminder.due_date).toLocaleString()}</p>
+                <p><strong>Due (Lagos Time):</strong> ${new Date(reminder.due_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' })}</p>
                </div>`,
       });
 
