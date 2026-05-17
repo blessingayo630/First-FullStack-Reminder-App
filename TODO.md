@@ -1,8 +1,8 @@
-- [ ] Inspect HomePage.tsx and identify where Edit/Delete buttons are rendered
-- [ ] Implement kebab (3 dots) icon per reminder card
-- [ ] Add dropdown menu with Edit + Delete inside
-- [ ] Add outside-click listener to close the dropdown when clicking anywhere else
-- [ ] Ensure clicking Edit/Delete closes the dropdown
-- [ ] Remove old inline Edit/Delete buttons
-- [ ] Run lint/build or dev to verify
+# TODO
+
+- [ ] Update Description UI in app/components/HomePage.tsx to support adding multiple descriptions via a PLUS icon.
+- [ ] Add conditional first-description behavior: show toast "Add your first description" when PLUS is clicked while the first input is empty.
+- [ ] Allow editing and deleting each description entry individually.
+- [ ] Ensure create/update payloads keep using formData.descriptions.join('|||') and split('|||') for edit.
+- [ ] Run lint/build checks (if available) and verify UI behavior manually.
 

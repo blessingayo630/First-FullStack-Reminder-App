@@ -17,6 +17,79 @@ interface Reminder {
   is_sent: boolean;
 }
 
+const unitOptions = [
+  { value: 'minutes', label: 'Minutes Before' },
+  { value: 'hours', label: 'Hours Before' },
+  { value: 'days', label: 'Days Before' },
+  { value: 'weeks', label: 'Weeks Before' },
+  { value: 'months', label: 'Months Before' },
+];
+
+function CustomDropdown({ 
+  value, 
+  onChange, 
+  options,
+  className = ""
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  options: { value: string; label: string }[];
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClick = () => setIsOpen(false);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [isOpen]);
+
+  return (
+    <div className={`relative w-full ${className}`} onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="alarm-input flex items-center justify-between text-left cursor-pointer w-full h-full"
+      >
+        <span>{selectedOption.label}</span>
+        <svg
+          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-2 alarm-dropdown rounded-lg overflow-hidden border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="py-1">
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/10 ${
+                  value === option.value ? 'text-[#ffb020] bg-white/5' : 'text-white/80'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +100,7 @@ export default function Home() {
   // Form state
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
+    descriptions: [''],
     dueDate: '',
     remindBefore: 1,
     remindUnit: 'days',
@@ -142,6 +215,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           ...formData,
+          description: formData.descriptions.filter(d => d.trim() !== '').join('|||'),
           dueDate: utcDueDate, // Send actual UTC ISO string
           phoneNumber: formData.phoneNumber || null,
         }),
@@ -180,9 +254,13 @@ export default function Home() {
         date.getTime() - date.getTimezoneOffset() * 60000
       ).toISOString().slice(0, 16);
 
+      const descriptions = latestReminder.description
+        ? latestReminder.description.split('|||')
+        : [''];
+
       setFormData({
         title: latestReminder.title,
-        description: latestReminder.description,
+        descriptions: descriptions.length > 0 ? descriptions : [''],
         dueDate: localDateString,
         remindBefore: latestReminder.remind_before,
         remindUnit: latestReminder.remind_unit,
@@ -194,6 +272,18 @@ export default function Home() {
       console.error('Error loading reminder for edit:', error);
       toast.error('Failed to load reminder');
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      descriptions: [''],
+      dueDate: '',
+      remindBefore: 1,
+      remindUnit: 'days',
+      userEmail: '',
+      phoneNumber: '',
+    });
   };
 
   // Simple update - send the local datetime string as-is
@@ -218,6 +308,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           ...formData,
+          description: formData.descriptions.filter(d => d.trim() !== '').join('|||'),
           id: editingReminder.id,
           dueDate: utcDueDate, // Send actual UTC ISO string
         }),
@@ -239,20 +330,40 @@ export default function Home() {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      dueDate: '',
-      remindBefore: 1,
-      remindUnit: 'days',
-      userEmail: '',
-      phoneNumber: '',
-    });
-  };
-
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [openMenuForId, setOpenMenuForId] = useState<number | null>(null);
+
+const addDescriptionField = () => {
+  setFormData((prev) => {
+    const lastDesc = prev.descriptions[prev.descriptions.length - 1];
+
+    if (prev.descriptions.length === 1 && !lastDesc.trim()) {
+      toast.warn('Add your first description');
+      return prev;
+    }
+
+    return {
+      ...prev,
+      descriptions: [...prev.descriptions, ''],
+    };
+  });
+};
+
+ const removeDescriptionField = (index: number) => {
+  // Prevent deleting the first field
+  if (index === 0) return;
+
+  setFormData((prev) => ({
+    ...prev,
+    descriptions: prev.descriptions.filter((_, i) => i !== index),
+  }));
+};
+
+  const updateDescription = (index: number, value: string) => {
+    const newDescs = [...formData.descriptions];
+    newDescs[index] = value;
+    setFormData({ ...formData, descriptions: newDescs });
+  };
 
   const handleDelete = async (id: number) => {
     if (deletingId === id) return;
@@ -402,17 +513,59 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">
-                    Description (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    className="alarm-input"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Additional details"
-                  />
-                </div>
+                    <label className="block text-sm font-medium text-white/70 mb-1">
+                      Description (Optional)
+                    </label>
+
+                    <div className="space-y-3">
+                      {formData.descriptions.map((desc, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2"
+                        >
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              className="alarm-input"
+                              value={desc}
+                              onChange={(e) => updateDescription(index, e.target.value)}
+                              placeholder={
+                                index === 0
+                                  ? 'Additional details'
+                                  : `Additional details ${index + 1}`
+                              }
+                            />
+                          </div>
+
+                          {/* PLUS button only on first field */}
+                          {index === 0 && (
+                            <button
+                              type="button"
+                              aria-label="Add another description"
+                              title="Add description"
+                              onClick={addDescriptionField}
+                              className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
+                            >
+                              <span className="text-2xl leading-none">+</span>
+                            </button>
+                          )}
+
+                          {/* CLOSE button only for added fields */}
+                          {index !== 0 && (
+                            <button
+                              type="button"
+                              aria-label={`Delete description ${index + 1}`}
+                              title="Delete"
+                              onClick={() => removeDescriptionField(index)}
+                              className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
+                            >
+                              <span className="text-xl leading-none">×</span>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    </div>
 
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1">
@@ -430,27 +583,22 @@ export default function Home() {
 
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1">Remind Me</label>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-stretch">
                     <input
                       type="number"
                       min="1"
                       required
-                      className="w-16 alarm-input"
+                      className="flex-1 alarm-input"
 
                       value={formData.remindBefore}
                       onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
                     />
-                    <select
-                      className="flex-1 alarm-input"
+                    <CustomDropdown
                       value={formData.remindUnit}
-                      onChange={(e) => setFormData({ ...formData, remindUnit: e.target.value })}
-                    >
-                      <option value="minutes">Minutes Before</option>
-                      <option value="hours">Hours Before</option>
-                      <option value="days">Days Before</option>
-                      <option value="weeks">Weeks Before</option>
-                      <option value="months">Months Before</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, remindUnit: val })}
+                      options={unitOptions}
+                      className="flex-1"
+                    />
                   </div>
                 </div>
               </div>
@@ -512,7 +660,7 @@ export default function Home() {
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                   />
                 </div>
-
+{/* 
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1">
                     Description (Optional)
@@ -520,10 +668,48 @@ export default function Home() {
                   <input
                     type="text"
                     className="alarm-input"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    value={formData.descriptions[0] ?? ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        descriptions: [e.target.value, ...(formData.descriptions.slice(1) ?? [])],
+                      })
+                    }
                   />
-                </div>
+                </div> */}
+
+                
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-white/70 mb-1">
+                      Description (Optional)
+                    </label>
+
+                    {formData.descriptions.map((desc, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            className="alarm-input"
+                            value={desc}
+                            onChange={(e) => updateDescription(index, e.target.value)}
+                            placeholder={index === 0 ? 'Additional details' : `Additional details ${index + 1}`}
+                          />
+                        </div>
+
+                {index !== 0 && (
+                    <button
+                      type="button"
+                      aria-label={`Delete description ${index + 1}`}
+                      title="Delete"
+                      onClick={() => removeDescriptionField(index)}
+                      className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
+                    >
+                      <span className="text-xl leading-none">×</span>
+                    </button>
+                  )}
+                      </div>
+                    ))}
+                  </div>
 
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1">
@@ -541,27 +727,22 @@ export default function Home() {
 
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-1">Remind Me</label>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-stretch">
                     <input
                       type="number"
                       min="1"
                       required
-                      className="w-16 alarm-input"
+                      className="flex-1 alarm-input"
                       value={formData.remindBefore}
 
                       onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
                     />
-                    <select
-                      className="flex-1 alarm-input"
+                    <CustomDropdown
                       value={formData.remindUnit}
-                      onChange={(e) => setFormData({ ...formData, remindUnit: e.target.value })}
-                    >
-                      <option value="minutes">Minutes Before</option>
-                      <option value="hours">Hours Before</option>
-                      <option value="days">Days Before</option>
-                      <option value="weeks">Weeks Before</option>
-                      <option value="months">Months Before</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, remindUnit: val })}
+                      options={unitOptions}
+                      className="flex-1"
+                    />
                   </div>
                 </div>
               </div>
@@ -678,7 +859,14 @@ export default function Home() {
                       </div>
 
                       {reminder.description && (
-                        <p className="text-white/65 mb-2">{reminder.description}</p>
+                        <div className="space-y-1 mb-2">
+                          {reminder.description.split('|||').map((desc, i) => (
+                            <p key={i} className="text-white/65 flex items-start gap-2">
+                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-white/30 flex-shrink-0" />
+                              {desc}
+                            </p>
+                          ))}
+                        </div>
                       )}
 
                       <div className="flex flex-wrap gap-3 text-sm">

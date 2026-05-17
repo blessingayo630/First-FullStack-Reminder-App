@@ -45,6 +45,29 @@
   }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromTop {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-in {
+  animation-duration: 200ms;
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+
+.slide-in-from-top-2 {
+  animation-name: slideInFromTop;
+}
+
 /* Shared UI helpers */
 .card-neon {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.045));
@@ -165,6 +188,44 @@
     0 0 0 4px rgba(255, 176, 32, 0.14),
     0 0 26px rgba(255, 176, 32, 0.12);
 }
+
+/* Keep selects visually consistent with inputs across browsers (mobile + web) */
+.alarm-select {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(233, 238, 252, 0.98);
+  padding: 10px 38px 10px 12px; /* room for arrow */
+  outline: none;
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image: linear-gradient(transparent, transparent);
+  position: relative;
+}
+
+.alarm-select:focus {
+  border-color: rgba(255, 176, 32, 0.35);
+  box-shadow:
+    0 0 0 4px rgba(255, 176, 32, 0.14),
+    0 0 26px rgba(255, 176, 32, 0.12);
+}
+
+/* Custom dropdown arrow */
+.alarm-select {
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20'%3E%3Cpath fill='rgba(233,238,252,0.9)' d='M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z'/%3E%3C/svg%3E");
+}
+
 
 .alarm-dropdown {
   background: rgba(6, 8, 18, 0.88);
