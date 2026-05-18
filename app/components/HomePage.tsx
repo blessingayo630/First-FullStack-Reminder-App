@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Loading from './Loading';
+import { requestNotificationPermission } from '@/lib/notifications';
 
 interface Reminder {
   id: number;
@@ -96,6 +97,10 @@ export default function Home() {
   const [showForm, setShowForm] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
+
+  useEffect(() => {
+  requestNotificationPermission();
+}, []);
 
   // Form state
   const [formData, setFormData] = useState({
