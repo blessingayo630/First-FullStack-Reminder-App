@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+  import { Resend } from 'resend';
 
 interface Reminder {
   id: number;
@@ -73,269 +73,224 @@ export async function sendReminderEmail(reminder: Reminder) {
       //   </html>
       // `,
       
-      html: `
+ html: `
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #0b1020;
-      padding: 30px 15px;
-      color: #ffffff;
-    }
-
-    .wrapper {
-      max-width: 620px;
-      margin: auto;
-    }
-
-    .container {
-      background: #111827;
-      border-radius: 24px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.08);
-      box-shadow:
-        0 10px 40px rgba(0,0,0,0.45),
-        0 0 0 1px rgba(255,255,255,0.03);
-    }
-
-    .hero {
-      background:
-        radial-gradient(circle at top right, rgba(255,176,32,0.35), transparent 30%),
-        linear-gradient(135deg, #1e293b, #0f172a);
-      padding: 45px 35px;
-      text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .hero-icon {
-      width: 70px;
-      height: 70px;
-      margin: 0 auto 20px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 34px;
-      backdrop-filter: blur(10px);
-    }
-
-    .hero h1 {
-      font-size: 32px;
-      font-weight: 800;
-      margin-bottom: 10px;
-      color: #ffffff;
-    }
-
-    .hero p {
-      color: rgba(255,255,255,0.7);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .content {
-      padding: 35px;
-    }
-
-    .card {
-      background: linear-gradient(
-        180deg,
-        rgba(255,255,255,0.06),
-        rgba(255,255,255,0.03)
-      );
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 28px;
-    }
-
-    .label {
-      color: #ffb020;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
-      text-transform: uppercase;
-    }
-
-    .title {
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 18px;
-      line-height: 1.3;
-      color: #ffffff;
-    }
-
-    .description {
-      color: rgba(255,255,255,0.72);
-      font-size: 15px;
-      line-height: 1.8;
-      margin-bottom: 30px;
-    }
-
-    .info-grid {
-      display: grid;
-      gap: 14px;
-    }
-
-    .info-box {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 14px;
-      padding: 16px;
-    }
-
-    .info-title {
-      color: rgba(255,255,255,0.55);
-      font-size: 12px;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-    }
-
-    .info-value {
-      color: #ffffff;
-      font-size: 15px;
-      font-weight: 600;
-      line-height: 1.5;
-    }
-
-    .button-wrap {
-      text-align: center;
-      margin-top: 35px;
-    }
-
-    .button {
-      display: inline-block;
-      padding: 14px 28px;
-      background: linear-gradient(135deg, #ffb020, #ff8c00);
-      color: #111827 !important;
-      text-decoration: none;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 15px;
-      box-shadow: 0 10px 25px rgba(255,176,32,0.35);
-    }
-
-    .footer {
-      padding: 28px 35px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      text-align: center;
-      color: rgba(255,255,255,0.45);
-      font-size: 13px;
-      line-height: 1.7;
-    }
-
-    @media only screen and (max-width: 600px) {
-      .hero {
-        padding: 35px 24px;
-      }
-
-      .content {
-        padding: 24px;
-      }
-
-      .title {
-        font-size: 24px;
-      }
-
-      .hero h1 {
-        font-size: 28px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reminder Email</title>
 </head>
 
-<body>
-  <div class="wrapper">
-    <div class="container">
+<body style="margin:0;padding:0;background-color:#f4f7fb;font-family:Arial,sans-serif;">
 
-      <div class="hero">
-        <div class="hero-icon">⏰</div>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f4f7fb">
+<tr>
+<td align="center" style="padding:40px 15px;">
 
-        <h1>Reminder Alert</h1>
+  <table width="600" border="0" cellspacing="0" cellpadding="0"
+    style="background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
 
-        <p>
-          You scheduled a reminder and the time is almost here.
+    <!-- HEADER -->
+    <tr>
+      <td
+        style="
+          background:linear-gradient(135deg,#ffb020,#ff8c00);
+          padding:45px 30px;
+          text-align:center;
+        "
+      >
+        <div style="font-size:52px;margin-bottom:12px;">
+          ⏰
+        </div>
+
+        <div style="font-size:32px;font-weight:bold;color:#ffffff;">
+          Reminder Alert
+        </div>
+
+        <div
+          style="
+            margin-top:14px;
+            font-size:16px;
+            line-height:1.6;
+            color:rgba(255,255,255,0.9);
+          "
+        >
           Stay organized and never miss an important task.
-        </p>
-      </div>
+        </div>
+      </td>
+    </tr>
 
-      <div class="content">
+    <!-- BODY -->
+    <tr>
+      <td style="padding:40px 35px;">
 
-        <div class="card">
+        <div
+          style="
+            display:inline-block;
+            background:#fff7e8;
+            color:#ff8c00;
+            font-size:12px;
+            font-weight:bold;
+            padding:8px 14px;
+            border-radius:30px;
+            margin-bottom:22px;
+            letter-spacing:0.5px;
+          "
+        >
+          UPCOMING REMINDER
+        </div>
 
-          <div class="label">
-            Upcoming Reminder
-          </div>
+        <div
+          style="
+            font-size:30px;
+            font-weight:bold;
+            color:#111827;
+            line-height:1.4;
+            margin-bottom:20px;
+          "
+        >
+          ${reminder.title}
+        </div>
 
-          <div class="title">
-            ${reminder.title}
-          </div>
+        ${
+          reminder.description
+            ? `
+              <div
+                style="
+                  font-size:16px;
+                  line-height:1.8;
+                  color:#4b5563;
+                  margin-bottom:30px;
+                "
+              >
+                ${reminder.description}
+              </div>
+            `
+            : ''
+        }
 
-          ${
-            reminder.description
-              ? `
-                <div class="description">
-                  ${reminder.description}
-                </div>
-              `
-              : ''
-          }
+        <!-- INFO CARD -->
+        <table
+          width="100%"
+          border="0"
+          cellspacing="0"
+          cellpadding="0"
+          style="
+            background:#f9fafb;
+            border:1px solid #e5e7eb;
+            border-radius:14px;
+            overflow:hidden;
+          "
+        >
 
-          <div class="info-grid">
+          <tr>
+            <td style="padding:22px;border-bottom:1px solid #e5e7eb;">
 
-            <div class="info-box">
-              <div class="info-title">
+              <div
+                style="
+                  font-size:12px;
+                  color:#6b7280;
+                  text-transform:uppercase;
+                  margin-bottom:8px;
+                  font-weight:bold;
+                  letter-spacing:0.6px;
+                "
+              >
                 Due Date
               </div>
 
-              <div class="info-value">
+              <div
+                style="
+                  font-size:16px;
+                  color:#111827;
+                  font-weight:600;
+                "
+              >
                 📅 ${dueDate}
               </div>
-            </div>
 
-            <div class="info-box">
-              <div class="info-title">
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:22px;">
+
+              <div
+                style="
+                  font-size:12px;
+                  color:#6b7280;
+                  text-transform:uppercase;
+                  margin-bottom:8px;
+                  font-weight:bold;
+                  letter-spacing:0.6px;
+                "
+              >
                 Reminder Time
               </div>
 
-              <div class="info-value">
+              <div
+                style="
+                  font-size:16px;
+                  color:#111827;
+                  font-weight:600;
+                "
+              >
                 🔔 ${reminder.remind_before} ${reminder.remind_unit} before due date
               </div>
-            </div>
 
-          </div>
+            </td>
+          </tr>
 
-          <div class="button-wrap">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}" class="button">
-              Open Reminder App
-            </a>
-          </div>
+        </table>
+
+        <!-- BUTTON -->
+        <div style="text-align:center;margin-top:40px;">
+
+          <a
+            href="${process.env.NEXT_PUBLIC_APP_URL}"
+            style="
+              display:inline-block;
+              background:#ff8c00;
+              color:#ffffff;
+              text-decoration:none;
+              padding:16px 34px;
+              border-radius:12px;
+              font-size:16px;
+              font-weight:bold;
+            "
+          >
+            Open Reminder App
+          </a>
 
         </div>
 
-      </div>
+      </td>
+    </tr>
 
-      <div class="footer">
-        This is an automated notification from Reminder App.<br />
+    <!-- FOOTER -->
+    <tr>
+      <td
+        style="
+          padding:28px 30px;
+          background:#f9fafb;
+          text-align:center;
+          font-size:13px;
+          line-height:1.8;
+          color:#6b7280;
+        "
+      >
+        This is an automated notification from Reminder App.<br>
         © 2026 Reminder App. All rights reserved.
-      </div>
+      </td>
+    </tr>
 
-    </div>
-  </div>
+  </table>
+
+</td>
+</tr>
+</table>
+
 </body>
 </html>
 `,
