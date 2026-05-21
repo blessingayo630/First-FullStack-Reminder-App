@@ -32,268 +32,212 @@ export async function sendReminderEmail(reminder: Reminder) {
       from: 'Reminder App <onboarding@resend.dev>',
       to: [reminder.user_email],
       subject: `🔔 REMINDER: ${reminder.title}`,
-      // html: `
-      //   <!DOCTYPE html>
-      //   <html>
-      //   <head>
-      //     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-      //     <style>
-      //       body { font-family: 'Montserrat', sans-serif; background-color: #070912; color: #e9eefc; margin: 0; padding: 0; }
-      //       .container { max-width: 600px; margin: 20px auto; padding: 30px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.045)); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; box-shadow: 0 0 28px rgba(255, 176, 32, 0.12); }
-      //       h2 { color: #ffb020; font-weight: 700; font-size: 24px; margin-top: 0; }
-      //       .content { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px; border: 1px solid rgba(255, 176, 32, 0.2); margin: 20px 0; }
-      //       .title { font-size: 20px; font-weight: 600; color: #ffffff; margin-bottom: 10px; }
-      //       .desc { color: rgba(233, 238, 252, 0.7); margin-bottom: 20px; line-height: 1.6; }
-      //       .footer { color: rgba(233, 238, 252, 0.4); font-size: 12px; text-align: center; margin-top: 30px; }
-      //       .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-      //       .badge-due { background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; }
-      //       .badge-remind { background: rgba(255, 176, 32, 0.12); border: 1px solid rgba(255, 176, 32, 0.3); color: #ffb020; margin-left: 10px; }
-      //     </style>
-      //   </head>
-      //   <body>
-      //     <div class="container">
-      //       <h2>⏰ Reminder Alert</h2>
-            
-      //       <div class="content">
-      //         <div class="title">${reminder.title}</div>
-      //         ${reminder.description ? `<div class="desc">${reminder.description}</div>` : ''}
-              
-      //         <div style="margin-top: 20px;">
-      //           <span class="badge badge-due">📅 Due: ${dueDate}</span>
-      //           <span class="badge badge-remind">⏰ ${reminder.remind_before} ${reminder.remind_unit} before</span>
-      //         </div>
-      //       </div>
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="margin:0;padding:0;background-color:#e5e7eb;font-family:Arial,sans-serif;">
 
-      //       <div class="footer">
-      //         This is an automated reminder from your Reminder App.<br>
-      //         © 2026 Reminder App. All rights reserved.
-      //       </div>
-      //     </div>
-      //   </body>
-      //   </html>
-      // `,
-      
- html: `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reminder Email</title>
-</head>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#e5e7eb;padding:30px 0;">
+        <tr>
+        <td align="center">
 
-<body style="margin:0;padding:0;background-color:#f4f7fb;font-family:Arial,sans-serif;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;">
 
-<table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f4f7fb">
-<tr>
-<td align="center" style="padding:40px 15px;">
+        <!-- HEADER -->
+        <tr>
+        <td align="center" style="background-color:#2563eb;padding:40px 20px;">
 
-  <table width="600" border="0" cellspacing="0" cellpadding="0"
-    style="background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
-
-    <!-- HEADER -->
-    <tr>
-      <td
-        style="
-          background:linear-gradient(135deg,#ffb020,#ff8c00);
-          padding:45px 30px;
-          text-align:center;
-        "
-      >
-        <div style="font-size:52px;margin-bottom:12px;">
-          ⏰
+        <div style="font-size:50px;margin-bottom:10px;">
+        🔔
         </div>
 
-        <div style="font-size:32px;font-weight:bold;color:#ffffff;">
-          Reminder Alert
-        </div>
+        <h1 style="
+        margin:0;
+        font-size:30px;
+        font-weight:bold;
+        color:#ffffff;
+        font-family:Arial,sans-serif;
+        ">
+        Reminder Alert
+        </h1>
 
-        <div
-          style="
-            margin-top:14px;
-            font-size:16px;
-            line-height:1.6;
-            color:rgba(255,255,255,0.9);
-          "
-        >
-          Stay organized and never miss an important task.
-        </div>
-      </td>
-    </tr>
+        <p style="
+        margin-top:12px;
+        font-size:16px;
+        line-height:24px;
+        color:#dbeafe;
+        font-family:Arial,sans-serif;
+        ">
+        Your scheduled reminder is here.
+        </p>
 
-    <!-- BODY -->
-    <tr>
-      <td style="padding:40px 35px;">
+        </td>
+        </tr>
 
-        <div
-          style="
-            display:inline-block;
-            background:#fff7e8;
-            color:#ff8c00;
-            font-size:12px;
-            font-weight:bold;
-            padding:8px 14px;
-            border-radius:30px;
-            margin-bottom:22px;
-            letter-spacing:0.5px;
-          "
-        >
-          UPCOMING REMINDER
-        </div>
+        <!-- BODY -->
+        <tr>
+        <td style="padding:40px 35px;">
 
-        <div
-          style="
-            font-size:30px;
-            font-weight:bold;
-            color:#111827;
-            line-height:1.4;
-            margin-bottom:20px;
-          "
-        >
-          ${reminder.title}
-        </div>
+        <p style="
+        margin:0 0 10px 0;
+        font-size:13px;
+        font-weight:bold;
+        color:#2563eb;
+        letter-spacing:1px;
+        font-family:Arial,sans-serif;
+        ">
+        UPCOMING TASK
+        </p>
+
+        <h2 style="
+        margin:0 0 20px 0;
+        font-size:28px;
+        line-height:36px;
+        color:#111827;
+        font-family:Arial,sans-serif;
+        ">
+        ${reminder.title}
+        </h2>
 
         ${
           reminder.description
             ? `
-              <div
-                style="
-                  font-size:16px;
-                  line-height:1.8;
-                  color:#4b5563;
-                  margin-bottom:30px;
-                "
-              >
-                ${reminder.description}
-              </div>
-            `
+        <p style="
+        margin:0 0 30px 0;
+        font-size:16px;
+        line-height:28px;
+        color:#374151;
+        font-family:Arial,sans-serif;
+        ">
+        ${reminder.description}
+        </p>
+        `
             : ''
         }
 
-        <!-- INFO CARD -->
-        <table
-          width="100%"
-          border="0"
-          cellspacing="0"
-          cellpadding="0"
-          style="
-            background:#f9fafb;
-            border:1px solid #e5e7eb;
-            border-radius:14px;
-            overflow:hidden;
-          "
-        >
+        <!-- DUE DATE -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="background-color:#f3f4f6;border:1px solid #d1d5db;margin-bottom:15px;">
 
-          <tr>
-            <td style="padding:22px;border-bottom:1px solid #e5e7eb;">
+        <tr>
+        <td style="padding:18px;">
 
-              <div
-                style="
-                  font-size:12px;
-                  color:#6b7280;
-                  text-transform:uppercase;
-                  margin-bottom:8px;
-                  font-weight:bold;
-                  letter-spacing:0.6px;
-                "
-              >
-                Due Date
-              </div>
+        <p style="
+        margin:0 0 8px 0;
+        font-size:12px;
+        font-weight:bold;
+        color:#6b7280;
+        letter-spacing:1px;
+        font-family:Arial,sans-serif;
+        ">
+        DUE DATE
+        </p>
 
-              <div
-                style="
-                  font-size:16px;
-                  color:#111827;
-                  font-weight:600;
-                "
-              >
-                📅 ${dueDate}
-              </div>
+        <p style="
+        margin:0;
+        font-size:16px;
+        font-weight:bold;
+        color:#111827;
+        font-family:Arial,sans-serif;
+        ">
+        📅 ${dueDate}
+        </p>
 
-            </td>
-          </tr>
+        </td>
+        </tr>
 
-          <tr>
-            <td style="padding:22px;">
+        </table>
 
-              <div
-                style="
-                  font-size:12px;
-                  color:#6b7280;
-                  text-transform:uppercase;
-                  margin-bottom:8px;
-                  font-weight:bold;
-                  letter-spacing:0.6px;
-                "
-              >
-                Reminder Time
-              </div>
+        <!-- REMINDER -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="background-color:#f3f4f6;border:1px solid #d1d5db;">
 
-              <div
-                style="
-                  font-size:16px;
-                  color:#111827;
-                  font-weight:600;
-                "
-              >
-                🔔 ${reminder.remind_before} ${reminder.remind_unit} before due date
-              </div>
+        <tr>
+        <td style="padding:18px;">
 
-            </td>
-          </tr>
+        <p style="
+        margin:0 0 8px 0;
+        font-size:12px;
+        font-weight:bold;
+        color:#6b7280;
+        letter-spacing:1px;
+        font-family:Arial,sans-serif;
+        ">
+        REMINDER TIME
+        </p>
+
+        <p style="
+        margin:0;
+        font-size:16px;
+        font-weight:bold;
+        color:#111827;
+        font-family:Arial,sans-serif;
+        ">
+        ⏰ ${reminder.remind_before} ${reminder.remind_unit} before
+        </p>
+
+        </td>
+        </tr>
 
         </table>
 
         <!-- BUTTON -->
-        <div style="text-align:center;margin-top:40px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+        <td align="center" style="padding-top:35px;">
 
-          <a
-            href="${process.env.NEXT_PUBLIC_APP_URL}"
-            style="
-              display:inline-block;
-              background:#ff8c00;
-              color:#ffffff;
-              text-decoration:none;
-              padding:16px 34px;
-              border-radius:12px;
-              font-size:16px;
-              font-weight:bold;
-            "
-          >
-            Open Reminder App
-          </a>
-
-        </div>
-
-      </td>
-    </tr>
-
-    <!-- FOOTER -->
-    <tr>
-      <td
+        <a href="${process.env.NEXT_PUBLIC_APP_URL}"
         style="
-          padding:28px 30px;
-          background:#f9fafb;
-          text-align:center;
-          font-size:13px;
-          line-height:1.8;
-          color:#6b7280;
-        "
-      >
+        background-color:#2563eb;
+        color:#ffffff;
+        text-decoration:none;
+        padding:14px 30px;
+        font-size:16px;
+        font-weight:bold;
+        display:inline-block;
+        font-family:Arial,sans-serif;
+        ">
+        Open Reminder App
+        </a>
+
+        </td>
+        </tr>
+        </table>
+
+        </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+        <td align="center"
+        style="
+        background-color:#f3f4f6;
+        padding:25px 20px;
+        ">
+
+        <p style="
+        margin:0;
+        font-size:13px;
+        line-height:22px;
+        color:#00000;
+        font-family:Arial,sans-serif;
+        ">
         This is an automated notification from Reminder App.<br>
         © 2026 Reminder App. All rights reserved.
-      </td>
-    </tr>
+        </p>
 
-  </table>
+        </td>
+        </tr>
 
-</td>
-</tr>
-</table>
+        </table>
 
-</body>
-</html>
-`,
+        </td>
+        </tr>
+        </table>
+
+        </body>
+        </html>
+        `,
       
       text: `
         REMINDER: ${reminder.title}

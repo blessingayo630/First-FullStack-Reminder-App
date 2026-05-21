@@ -153,6 +153,8 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseService } from '@/lib/supabase';
 import { sendSMSReminder } from '@/lib/sms';
+import { sendReminderEmail } from '@/lib/email';
+
 
 // ✅ FORCE NODE RUNTIME
 export const runtime = 'nodejs';
@@ -205,138 +207,47 @@ export async function GET(request: Request) {
       let pushSent = false;
 
       // =========================
-      // 1. SEND EMAIL
+      // 0. OPTIMISTIC LOCK: Mark as sent BEFORE sending to prevent race conditions
+      // This prevents duplicate sends if cron runs multiple times
+      // =========================
+      const { data: lockData, error: lockError } = await supabase
+        .from('reminders')
+        .update({ is_sent: true })
+        .eq('id', reminder.id)
+        .eq('is_sent', false)
+        .select()
+        .single();
+
+      if (lockError || !lockData) {
+        console.log(`⏭️ Reminder ${reminder.id} already being processed, skipping`);
+        continue;
+      }
+
+      // =========================
+      // 1. SEND EMAIL (use shared template)
       // =========================
       try {
-        const { error: emailError } =
-          await resend.emails.send({
-            from:
-              'Reminder App <onboarding@resend.dev>',
+        emailSent = await sendReminderEmail(reminder);
 
-            to: [reminder.user_email],
-
-            subject: `🔔 REMINDER: ${reminder.title}`,
-
-            html: `
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-
-                <style>
-                  body {
-                    font-family: 'Montserrat', sans-serif;
-                    background-color: #070912;
-                    color: #e9eefc;
-                    margin: 0;
-                    padding: 0;
-                  }
-
-                  .container {
-                    max-width: 600px;
-                    margin: 20px auto;
-                    padding: 30px;
-                    background: linear-gradient(
-                      180deg,
-                      rgba(255,255,255,0.08),
-                      rgba(255,255,255,0.045)
-                    );
-
-                    border: 1px solid rgba(255,255,255,0.12);
-                    border-radius: 12px;
-                  }
-
-                  h2 {
-                    color: #ffb020;
-                  }
-
-                  .content {
-                    background: rgba(255,255,255,0.05);
-                    padding: 20px;
-                    border-radius: 10px;
-                    margin-top: 20px;
-                  }
-
-                  .title {
-                    font-size: 20px;
-                    font-weight: 700;
-                    color: white;
-                  }
-
-                  .desc {
-                    margin-top: 10px;
-                    color: rgba(233,238,252,0.8);
-                  }
-
-                  .footer {
-                    margin-top: 25px;
-                    font-size: 12px;
-                    color: rgba(233,238,252,0.45);
-                  }
-                </style>
-              </head>
-
-              <body>
-                <div class="container">
-                  <h2>⏰ Reminder Alert</h2>
-
-                  <div class="content">
-                    <div class="title">
-                      ${reminder.title}
-                    </div>
-
-                    ${
-                      reminder.description
-                        ? `
-                        <div class="desc">
-                          ${reminder.description}
-                        </div>
-                      `
-                        : ''
-                    }
-
-                    <div style="margin-top:20px;">
-                      📅 Due (Lagos):
-                      ${new Date(
-                        reminder.due_date
-                      ).toLocaleString('en-GB', {
-                        timeZone: 'Africa/Lagos',
-                      })}
-                    </div>
-
-                    <div style="margin-top:10px;">
-                      ⏰ ${reminder.remind_before}
-                      ${reminder.remind_unit} before
-                    </div>
-                  </div>
-
-                  <div class="footer">
-                    This is an automated reminder from Reminder App.
-                  </div>
-                </div>
-              </body>
-              </html>
-            `,
-          });
-
-        if (!emailError) {
-          emailSent = true;
-
-          console.log(
-            `✅ Email sent for reminder ${reminder.id}`
-          );
+        if (emailSent) {
+          console.log(`✅ Email sent for reminder ${reminder.id}`);
         } else {
-          console.error(
-            `❌ Email error for reminder ${reminder.id}`,
-            emailError
-          );
+          console.error(`❌ Email failed for reminder ${reminder.id}`);
+          // Revert the lock since email failed
+          await supabase
+            .from('reminders')
+            .update({ is_sent: false })
+            .eq('id', reminder.id);
         }
       } catch (err) {
-        console.error(
-          `❌ Email throw error for ${reminder.id}`,
-          err
-        );
+        console.error(`❌ Email throw error for ${reminder.id}`, err);
+        // Revert the lock since email failed
+        await supabase
+          .from('reminders')
+          .update({ is_sent: false })
+          .eq('id', reminder.id);
       }
+
 
       // =========================
       // 2. SEND SMS
@@ -424,33 +335,11 @@ export async function GET(request: Request) {
       }
 
       // =========================
-      // 4. MARK AS SENT
+      // 4. TRACK SUCCESS
       // =========================
-      if (
-        emailSent ||
-        smsSent ||
-        pushSent
-      ) {
-        const { error: updateError } =
-          await supabase
-            .from('reminders')
-            .update({
-              is_sent: true,
-            })
-            .eq('id', reminder.id);
-
-        if (updateError) {
-          console.error(
-            `❌ Failed to update reminder ${reminder.id}`,
-            updateError
-          );
-        } else {
-          sent++;
-
-          console.log(
-            `✅ Reminder ${reminder.id} marked as sent`
-          );
-        }
+      if (emailSent || smsSent || pushSent) {
+        sent++;
+        console.log(`✅ Reminder ${reminder.id} fully processed`);
       }
     }
 
