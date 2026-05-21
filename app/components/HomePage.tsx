@@ -93,14 +93,21 @@ function CustomDropdown({
 
 export default function Home() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
 
   useEffect(() => {
-  requestNotificationPermission();
-}, []);
+    const initNotifications = async () => {
+      const token = await requestNotificationPermission();
+      if (token) {
+        setFcmToken(token);
+      }
+    };
+    initNotifications();
+  }, []);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -223,6 +230,7 @@ export default function Home() {
           description: formData.descriptions.filter(d => d.trim() !== '').join('|||'),
           dueDate: utcDueDate, // Send actual UTC ISO string
           phoneNumber: formData.phoneNumber || null,
+          fcmToken: fcmToken,
         }),
       });
 
@@ -316,6 +324,7 @@ export default function Home() {
           description: formData.descriptions.filter(d => d.trim() !== '').join('|||'),
           id: editingReminder.id,
           dueDate: utcDueDate, // Send actual UTC ISO string
+          fcmToken: fcmToken,
         }),
       });
 
@@ -595,8 +604,12 @@ const addDescriptionField = () => {
                       required
                       className="flex-1 alarm-input"
 
-                      value={formData.remindBefore}
-                      onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
+                      value={String(formData.remindBefore)}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const next = raw === '' ? 0 : Number.parseInt(raw, 10);
+                        setFormData({ ...formData, remindBefore: next });
+                      }}
                     />
                     <CustomDropdown
                       value={formData.remindUnit}
@@ -738,9 +751,13 @@ const addDescriptionField = () => {
                       min="1"
                       required
                       className="flex-1 alarm-input"
-                      value={formData.remindBefore}
+                      value={String(formData.remindBefore)}
 
-                      onChange={(e) => setFormData({ ...formData, remindBefore: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const next = raw === '' ? 0 : Number.parseInt(raw, 10);
+                        setFormData({ ...formData, remindBefore: next });
+                      }}
                     />
                     <CustomDropdown
                       value={formData.remindUnit}

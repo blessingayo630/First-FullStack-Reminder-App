@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 // PUT - Update an existing reminder
 export async function PUT(request: Request) {
   try {
-    const { id, title, description, dueDate, remindBefore, remindUnit, userEmail } = await request.json();
+    const { id, title, description, dueDate, remindBefore, remindUnit, userEmail, fcmToken } = await request.json();
 
     if (!id) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
@@ -51,6 +51,8 @@ export async function PUT(request: Request) {
       remind_unit: remindUnit,
       reminder_time: reminderTime.toISOString(), // Store as UTC
       user_email: userEmail || 'temp@example.com',
+      fcm_token: fcmToken || null,
+      is_sent: false, // Reset status to Pending when edited
     };
 
     const { data, error } = await supabase

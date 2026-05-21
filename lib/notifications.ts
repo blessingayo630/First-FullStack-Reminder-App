@@ -1,4 +1,4 @@
-import { getMessagingInstance } from './firebase';
+import app from './firebase';
 
 export async function requestNotificationPermission() {
   try {
@@ -11,13 +11,16 @@ export async function requestNotificationPermission() {
       return null;
     }
 
-    const messaging = await getMessagingInstance();
-    if (!messaging) {
-      console.log('Messaging not supported in this environment');
+    const { getMessaging, getToken, isSupported } = await import('firebase/messaging');
+
+    const supported = await isSupported();
+    if (!supported) {
+      console.log('Messaging not supported');
       return null;
     }
 
-    const { getToken } = await import('firebase/messaging');
+    const messaging = getMessaging(app);
+
     const token = await getToken(messaging, {
       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
     });
@@ -28,4 +31,4 @@ export async function requestNotificationPermission() {
   } catch (error) {
     console.error('Error getting notification permission:', error);
   }
-} 
+}

@@ -7,7 +7,7 @@ const supabaseClient = supabase;
 // POST - Create a new reminder
 export async function POST(request: Request) {
   try {
-    const { title, description, dueDate, remindBefore, remindUnit, userEmail, phoneNumber } = await request.json();
+    const { title, description, dueDate, remindBefore, remindUnit, userEmail, phoneNumber, fcmToken } = await request.json();
 
     if (!title || !dueDate || !remindBefore || !remindUnit) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -61,6 +61,7 @@ console.log('dueDateObj parsed:', dueDateObj.toISOString());
           reminder_time: reminderTime.toISOString(), // Store as UTC
           user_email: userEmail || 'temp@example.com',
           phone_number: phoneNumber || null,
+          fcm_token: fcmToken || null,
           is_sent: false
         }
       ])
