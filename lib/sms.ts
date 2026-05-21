@@ -1,11 +1,5 @@
 import twilio from 'twilio';
 
-// Initialize Twilio client
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
-
 interface Reminder {
   id: number;
   title: string;
@@ -16,16 +10,31 @@ interface Reminder {
   user_email: string;
 }
 
+// Initialize Twilio client conditionally
+const client = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
+
+if (!client) {
+  console.warn('⚠️ Twilio client not initialized - TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN missing');
+}
+
 export async function sendSMSReminder(reminder: Reminder, phoneNumber: string) {
+  // Check if Twilio is configured
+  if (!client) {
+    console.warn(`⚠️ Twilio not configured - skipping SMS to ${phoneNumber}`);
+    return true; // Return true to not block reminder processing
+  }
+
   try {
     const dueDate = new Date(reminder.due_date).toLocaleString();
-    
+
     const message = await client.messages.create({
       body: `🔔 REMINDER: ${reminder.title}\n\nDue: ${dueDate}\nReminder: ${reminder.remind_before} ${reminder.remind_unit} before\n\nView at: ${process.env.NEXT_PUBLIC_APP_URL}`,
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phoneNumber,
     });
-    
+
     console.log(`✅ SMS sent to ${phoneNumber}: ${message.sid}`);
     return true;
   } catch (error) {

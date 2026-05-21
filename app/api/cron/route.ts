@@ -154,6 +154,7 @@ import { Resend } from 'resend';
 import { supabaseService } from '@/lib/supabase';
 import { sendSMSReminder } from '@/lib/sms';
 import { sendReminderEmail } from '@/lib/email';
+import admin from 'firebase-admin';
 
 
 // ✅ FORCE NODE RUNTIME
@@ -168,8 +169,20 @@ if (!process.env.RESEND_API_KEY) {
   console.error('❌ RESEND_API_KEY is missing!');
 }
 
-if (!process.env.FIREBASE_SERVER_KEY) {
-  console.error('❌ FIREBASE_SERVER_KEY is missing!');
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
+    });
+    console.log('✅ Firebase Admin SDK initialized');
+  } catch (error) {
+    console.error('❌ Firebase Admin initialization error:', error);
+  }
 }
 
 export async function GET(request: Request) {
@@ -282,55 +295,33 @@ export async function GET(request: Request) {
       }
 
       // =========================
-      // 3. SEND PUSH NOTIFICATION
+      // 3. SEND PUSH NOTIFICATION (using Firebase Admin SDK - HTTP v1 API)
       // =========================
       if (reminder.fcm_token) {
         try {
-          console.log(
-            `📲 Sending push notification...`
-          );
+          console.log(`📲 Sending push notification...`);
 
-          const response = await fetch(
-            'https://fcm.googleapis.com/fcm/send',
-            {
-              method: 'POST',
-
-              headers: {
-                'Content-Type':
-                  'application/json',
-
-                Authorization: `key=${process.env.FIREBASE_SERVER_KEY}`,
+          const message = {
+            notification: {
+              title: `🔔 ${reminder.title}`,
+              body: reminder.description || 'Reminder Alert',
+            },
+            token: reminder.fcm_token,
+            webpush: {
+              fcmOptions: {
+                link: process.env.NEXT_PUBLIC_APP_URL,
               },
+            },
+          };
 
-              body: JSON.stringify({
-                to: reminder.fcm_token,
+          const result = await admin.messaging().send(message);
 
-                notification: {
-                  title: `🔔 ${reminder.title}`,
-
-                  body:
-                    reminder.description ||
-                    'Reminder Alert',
-
-                  icon: '/icon.png',
-                },
-              }),
-            }
-          );
-
-          const result = await response.json();
-
-          console.log(
-            '✅ Push notification sent:',
-            result
-          );
-
+          console.log(`✅ Push notification sent: ${result}`);
           pushSent = true;
-        } catch (err) {
-          console.error(
-            `❌ Push notification error for ${reminder.id}`,
-            err
-          );
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          console.error(`❌ Push notification error for ${reminder.id}:`, errorMessage);
+          // Don't treat as fatal - continue processing
         }
       }
 
