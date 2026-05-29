@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-const supabaseClient = supabase;
+
  
 // DELETE - Remove a reminder
 export async function DELETE(request: Request) {

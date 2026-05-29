@@ -152,7 +152,7 @@ process.env.TZ = 'Africa/Lagos';
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseService } from '@/lib/supabase';
-import { sendSMSReminder } from '@/lib/sms';
+import { sendSMSReminder, sendSMSAfricaTalking } from '@/lib/sms';
 import { sendReminderEmail } from '@/lib/email';
 import admin from 'firebase-admin';
 
@@ -198,7 +198,9 @@ export async function GET(request: Request) {
       .from('reminders')
       .select('*')
       .lte('reminder_time', nowISO)
-      .eq('is_sent', false);
+      .eq('is_sent', false)
+      .eq('is_enabled', true);
+
 
     if (error) {
       console.error('❌ Supabase query error:', error);
@@ -271,11 +273,21 @@ export async function GET(request: Request) {
             `📱 Sending SMS to ${reminder.phone_number}`
           );
 
-          const smsResult =
-            await sendSMSReminder(
+          // Try Africa's Talking first (free tier available), fallback to Twilio
+          let smsResult = false;
+
+          if (process.env.AFRICAS_TALKING_API_KEY) {
+            smsResult = await sendSMSAfricaTalking(
               reminder,
               reminder.phone_number
             );
+          } else {
+            // Fallback to Twilio if Africa's Talking not configured
+            smsResult = await sendSMSReminder(
+              reminder,
+              reminder.phone_number
+            );
+          }
 
           if (smsResult) {
             smsSent = true;

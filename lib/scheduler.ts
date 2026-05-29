@@ -1,6 +1,6 @@
 
-import { createClient } from '@supabase/supabase-js';
 import { sendSMSReminder } from './sms';
+
 import { sendReminderEmail } from './email';
 import { supabase } from './supabase';
 
@@ -21,12 +21,15 @@ async function checkAndSendReminders() {
   console.log('🕐 Checking for due reminders...', new Date().toISOString());
   
   try {
-    // Find reminders that are due and not yet sent
+    // Find reminders that are due, not yet sent, and enabled
+    const nowISO = new Date().toISOString();
     const { data: reminders, error } = await supabase
       .from('reminders')
       .select('*')
-      .lte('reminder_time', new Date().toISOString())
-      .eq('is_sent', false);
+      .lte('reminder_time', nowISO)
+      .eq('is_sent', false)
+      .eq('is_enabled', true);
+
 
     if (error) {
       console.error('Error fetching reminders:', error);

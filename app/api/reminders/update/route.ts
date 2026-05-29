@@ -5,7 +5,15 @@ import { supabase } from '@/lib/supabase';
 // PUT - Update an existing reminder
 export async function PUT(request: Request) {
   try {
-    const { id, title, description, dueDate, remindBefore, remindUnit, userEmail, fcmToken } = await request.json();
+    const { id, title, description, dueDate, remindBefore, remindUnit, userEmail, fcmToken, isEnabled } = await request.json();
+
+    // Backward-compatible: if isEnabled isn't provided, keep DB value as-is.
+    // (kept for future use; normalizedIsEnabled intentionally unused today)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _normalizedIsEnabled = typeof isEnabled === 'boolean' ? isEnabled : undefined;
+
+
+
 
     if (!id) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
@@ -52,8 +60,17 @@ export async function PUT(request: Request) {
       reminder_time: reminderTime.toISOString(), // Store as UTC
       user_email: userEmail || 'temp@example.com',
       fcm_token: fcmToken || null,
+      // If user only toggles the enabled switch, don't force-set to false
+      is_enabled: typeof isEnabled === 'boolean' ? isEnabled : undefined,
       is_sent: false, // Reset status to Pending when edited
     };
+
+    // Remove undefined fields so Supabase doesn't overwrite with null
+    Object.keys(updateData).forEach((k) => {
+      // @ts-expect-error runtime cleanup
+      if (updateData[k] === undefined) delete updateData[k];
+    });
+
 
     const { data, error } = await supabase
       .from('reminders')

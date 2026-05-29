@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-const supabaseClient = supabase;
+
 
 // GET - Fetch all reminders
 export async function GET() {
