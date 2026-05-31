@@ -9,12 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.35.0",
+    "@chakra-ui/react": "^2.10.9",
     "@emotion/react": "^11.14.0",
     "@supabase/supabase-js": "^2.105.1",
     "axios": "^1.15.2",
     "date-fns": "^4.1.0",
-    "firebase": "^12.13.0",
+    "firebase": "^12.14.0",
     "firebase-admin": "^13.10.0",
     "mongoose": "^8.23.1",
     "next": "16.2.4",

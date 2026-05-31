@@ -1,20 +1,7 @@
-- [x] Understand existing reminder app structure and UI/API/scheduler responsibilities.
-- [ ] Add reminder_type (once/recurring) + is_enabled to API/UI + database queries.
-- [ ] Update create/edit UI: implement per-description independent schedule by creating one DB row per description line.
-- [ ] Update create/update API routes to compute/store reminder_time per row and persist reminder_type + is_enabled.
-- [ ] Update scheduler/cron:
-  - [ ] Only process rows where is_enabled=true
-  - [ ] For once: send then mark as sent (sent_at) and stop
-  - [ ] For recurring: send then compute next due_date/reminder_time while keeping is_enabled
-- [ ] Update Home page UI:
-  - [ ] Sort recurring to the top by most recent expected send time
-  - [ ] Sort non-recurring below by due_date descending
-  - [ ] Replace Sent/Pending with:
-    - [ ] Recurring: switch icon controlling is_enabled
-    - [ ] Once: show UPCOMING for pending; remove Sent badge on Home
-- [ ] Add Past Reminder page (/past): show only non-recurring reminders where is_sent=true.
-- [ ] Update UI actions:
-  - [ ] Recurring switch toggles is_enabled via /api/reminders/update
-  - [ ] Once reminders cannot toggle; Sent moves to Past after send
-- [ ] Verify by running lint/build and manual end-to-end checks (create, edit, toggle, cron send, sorting, past page).
+# TODO
+
+- [x] Fix Supabase client env var typing/runtime guards in `lib/supabase.ts`
+- [x] Run TypeScript/lint/build to confirm no remaining TS errors
+
+
 
