@@ -1,25 +1,40 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Loading from './Loading';
 import { requestNotificationPermission } from '@/lib/notifications';
-import { Switch } from "@chakra-ui/react";
-import { ChangeEvent } from "react";
+import Switch from '@mui/material/Switch';
 
-interface Reminder {
+
+type ReminderItem = {
   id: number;
-  title: string;
   description: string;
-  due_date: string;     
+  due_date: string;
   remind_before: number;
   remind_unit: string;
-  user_email: string;
-  phoneNumber: string | null;
   is_sent: boolean;
   is_enabled?: boolean;
-}
+};
+
+
+type Reminder = {
+  id: number;
+  title: string;
+  user_email: string;
+  phone_number?: string;
+  is_enabled: boolean;
+  created_at: string;
+  reminder_items: ReminderItem[];
+};
+
+type DescriptionItem = {
+  text: string;
+  dueDate: string; // datetime-local (local)
+  remindBefore: number;
+  remindUnit: string;
+};
 
 
 const unitOptions = [
@@ -30,20 +45,20 @@ const unitOptions = [
   { value: 'months', label: 'Months Before' },
 ];
 
-function CustomDropdown({ 
-  value, 
-  onChange, 
+function CustomDropdown({
+  value,
+  onChange,
   options,
-  className = ""
-}: { 
-  value: string; 
-  onChange: (val: string) => void; 
+  className = '',
+}: {
+  value: string;
+  onChange: (val: string) => void;
   options: { value: string; label: string }[];
   className?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const selectedOption = options.find(opt => opt.value === value) || options[0];
+  const selectedOption = options.find((opt) => opt.value === value) || options[0];
 
   useEffect(() => {
     if (!isOpen) return;
@@ -100,27 +115,11 @@ export default function Home() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
 
-  useEffect(() => {  
-    const initNotifications = async () => {
-      const token = await requestNotificationPermission();
-      if (token) {
-        setFcmToken(token);
-      }
-    };
-    initNotifications();
-  }, []);
-
-  // Form state
-  type DescriptionItem = {
-    text: string;
-    dueDate: string; // datetime-local string (local)
-    remindBefore: number;
-    remindUnit: string;
-  };
-
+  // Form state (Add + Edit share the same state)
   const [formData, setFormData] = useState({
     title: '',
     descriptions: [
@@ -136,87 +135,85 @@ export default function Home() {
     isEnabled: true,
   });
 
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [openMenuForId, setOpenMenuForId] = useState<number | null>(null);
 
-  // Initial load effect - direct fetch, no callback needed
+  const refetch = useCallback(async () => {
+    try {
+      const response = await fetch('/api/reminders/getAll', { cache: 'no-store' });
+      const data = await response.json();
+      setReminders(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error refetching reminders:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      const token = await requestNotificationPermission();
+      if (token) setFcmToken(token);
+    };
+    initNotifications();
+  }, []);
+
+  // Initial load
   useEffect(() => {
     const loadReminders = async () => {
       setLoading(true);
       try {
         const response = await fetch('/api/reminders/getAll');
         const data = await response.json();
-        if (Array.isArray(data)) {
-          setReminders(data);
-        } else {
-          console.error('Invalid data from API:', data);
-          setReminders([]);
-        }
+        setReminders(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching reminders:', error);
       } finally {
         setLoading(false);
       }
     };
-
     loadReminders();
   }, []);
 
-  // Separate refetch for event handlers (stable)
-  const refetch = useCallback(async () => {
-    try {
-      const response = await fetch('/api/reminders/getAll', { cache: 'no-store' });
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setReminders(data);
-      } else {
-        console.error('Invalid data from API:', data);
-        setReminders([]);
-      }
-    } catch (error) {
-      console.error('Error refetching reminders:', error);
-    }
-  }, []);
-
-  // Polling: keep UI in sync with server-side scheduler updates (Pending -> Sent)
+  // Polling
   useEffect(() => {
     let cancelled = false;
 
     const poll = async () => {
       if (cancelled) return;
-      // Reduce unnecessary calls when tab is not visible
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (document.visibilityState === 'hidden') return;
 
       try {
         const response = await fetch('/api/reminders/getAll', { cache: 'no-store' });
         const data = await response.json();
         if (!Array.isArray(data)) return;
 
-        // Change detection to avoid re-render spam
         setReminders((prev) => {
           if (!Array.isArray(prev)) return data;
-
           if (prev.length !== data.length) return data;
 
-          // Compare by id + is_sent (and due_date just to be safe)
           for (let i = 0; i < prev.length; i++) {
             const a = prev[i];
             const b = data[i];
             if (a.id !== b.id) return data;
-            if (a.is_sent !== b.is_sent) return data;
-            if (a.due_date !== b.due_date) return data;
+
+            const aItems = a.reminder_items ?? [];
+            const bItems = b.reminder_items ?? [];
+            if (aItems.length !== bItems.length) return data;
+
+            for (let j = 0; j < aItems.length; j++) {
+              if (aItems[j].is_sent !== bItems[j].is_sent) return data;
+              if (aItems[j].due_date !== bItems[j].due_date) return data;
+            }
           }
 
           return prev;
         });
       } catch (error) {
-        // Swallow polling errors to keep UI responsive
         console.error('Polling error:', error);
       }
     };
 
-    // initial poll right after mount (in addition to initial load)
     poll();
-
-    const intervalId = window.setInterval(poll, 10000); // 10s
+    const intervalId = window.setInterval(poll, 10000);
 
     return () => {
       cancelled = true;
@@ -224,7 +221,81 @@ export default function Home() {
     };
   }, []);
 
-  // Simple submit - send the local datetime string as-is
+  // Click-outside for actions menu
+  useEffect(() => {
+    const handleDocumentMouseDown = (e: MouseEvent) => {
+      if (openMenuForId === null) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      const menuContainer = target.closest('[data-reminder-menu="true"]');
+      if (menuContainer) return;
+
+      setOpenMenuForId(null);
+    };
+
+    document.addEventListener('mousedown', handleDocumentMouseDown);
+    return () => document.removeEventListener('mousedown', handleDocumentMouseDown);
+  }, [openMenuForId]);
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      descriptions: [
+        {
+          text: '',
+          dueDate: '',
+          remindBefore: 1,
+          remindUnit: 'days',
+        },
+      ],
+      userEmail: '',
+      phoneNumber: '',
+      isEnabled: true,
+    });
+  };
+
+  const updateDescriptionField = (index: number, patch: Partial<DescriptionItem>) => {
+    setFormData((prev) => {
+      const next = [...prev.descriptions];
+      next[index] = { ...next[index], ...patch };
+      return { ...prev, descriptions: next };
+    });
+  };
+
+  const addDescriptionField = () => {
+    setFormData((prev) => {
+      const last = prev.descriptions[prev.descriptions.length - 1];
+
+      const isIncomplete = !last.text.trim() || !last.dueDate || !last.remindBefore || !last.remindUnit;
+      if (isIncomplete) {
+        toast.warn('Please complete Description, Due Date and Remind Me first');
+        return prev;
+      }
+
+      return {
+        ...prev,
+        descriptions: [
+          ...prev.descriptions,
+          {
+            text: '',
+            dueDate: '',
+            remindBefore: 1,
+            remindUnit: 'days',
+          },
+        ],
+      };
+    });
+  };
+
+  const removeDescriptionField = (index: number) => {
+    if (index === 0) return;
+    setFormData((prev) => ({
+      ...prev,
+      descriptions: prev.descriptions.filter((_, i) => i !== index),
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -241,11 +312,11 @@ export default function Home() {
           };
         })
         .filter(Boolean) as {
-          text: string;
-          dueDate: string;
-          remindBefore: number;
-          remindUnit: string;
-        }[];
+        text: string;
+        dueDate: string;
+        remindBefore: number;
+        remindUnit: string;
+      }[];
 
       if (items.length === 0 || items.every((i) => !i.text || !i.text.trim())) {
         toast.error('Please add at least one description');
@@ -254,364 +325,133 @@ export default function Home() {
 
       const response = await fetch('/api/reminders/create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: formData.title,
           userEmail: formData.userEmail,
           phoneNumber: formData.phoneNumber || null,
-           fcmToken: fcmToken,
+          fcmToken,
           isEnabled: formData.isEnabled,
           items,
         }),
       });
 
-      if (response.ok) {
-        resetForm();
-        setShowForm(false);
-        refetch();
-        toast.success('Reminder added successfully!');
-      } else {
-        const error = await response.json();
-        toast.error(`Error: ${error.error}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        toast.error(`Error: ${error?.error || response.statusText}`);
+        return;
       }
+
+      resetForm();
+      setShowForm(false);
+      refetch();
+      toast.success('Reminder added successfully!');
     } catch (error) {
       console.error('Error adding reminder:', error);
       toast.error('Failed to add reminder');
     }
   };
 
-  // For editing: just use the due_date as-is from the database
-  // const handleEditClick = async (reminder: Reminder) => {
-  //   try {
-  //     const response = await fetch(`/api/reminders?id=${reminder.id}`);
-  //     if (!response.ok) {
-  //       const errorText = await response.text();
-  //       throw new Error(`Failed to fetch reminder: ${response.status} ${errorText}`);
-  //     }
-  //     const latestReminder = await response.json();
-
-  //     setEditingReminder(latestReminder);
-
-  //     // Convert UTC ISO string from database to local datetime-local format (YYYY-MM-DDTHH:mm)
-  //     const date = new Date(latestReminder.due_date);
-  //     const localDateString = new Date(
-  //       date.getTime() - date.getTimezoneOffset() * 60000
-  //     ).toISOString().slice(0, 16);
-
-  //     const descriptions = latestReminder.description
-  //       ? latestReminder.description.split('|||')
-  //       : [''];
-
-  //     setFormData({
-  //       title: latestReminder.title,
-  //       descriptions: descriptions.length > 0 ? descriptions : [''],
-  //       dueDate: localDateString,
-  //       remindBefore: latestReminder.remind_before,
-  //       remindUnit: latestReminder.remind_unit,
-  //       userEmail: latestReminder.user_email,
-  //       phoneNumber: latestReminder.phoneNumber || '',
-  //       isEnabled:
-  //         typeof latestReminder.is_enabled === 'boolean'
-  //           ? latestReminder.is_enabled
-  //           : true,
-  //     });
-  //     setShowEditForm(true);
-  //   } catch (error) {
-  //     console.error('Error loading reminder for edit:', error);
-  //     toast.error('Failed to load reminder');
-  //   }
-  // };
-
   const handleEditClick = async (reminder: Reminder) => {
-  try {
-    const response = await fetch(`/api/reminders?id=${reminder.id}`);
+    try {
+      const response = await fetch(`/api/reminders?id=${reminder.id}`);
+      if (!response.ok) throw new Error(await response.text());
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to fetch reminder: ${response.status} ${errorText}`
-      );
+      const latestReminder = await response.json();
+      setEditingReminder(latestReminder);
+
+      const items: ReminderItem[] = Array.isArray(latestReminder.reminder_items)
+        ? (latestReminder.reminder_items as ReminderItem[])
+        : [];
+
+      const toLocalDateTimeInput = (utcISOString?: string) => {
+        if (!utcISOString) return '';
+        const d = new Date(String(utcISOString));
+        if (isNaN(d.getTime())) return '';
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      };
+
+      const descriptions: DescriptionItem[] = items.length
+        ? items.map((it) => ({
+            text: it.description ?? '',
+            dueDate: toLocalDateTimeInput(it.due_date),
+            remindBefore: it.remind_before ?? 1,
+            remindUnit: it.remind_unit ?? 'days',
+          }))
+        : [
+            {
+              text: '',
+              dueDate: '',
+              remindBefore: 1,
+              remindUnit: 'days',
+            },
+          ];
+
+      setFormData({
+        title: latestReminder.title ?? '',
+        descriptions,
+        userEmail: latestReminder.user_email ?? '',
+        phoneNumber: latestReminder.phoneNumber || '',
+        isEnabled: typeof latestReminder.is_enabled === 'boolean' ? latestReminder.is_enabled : true,
+      });
+
+      setShowEditForm(true);
+    } catch (error) {
+      console.error('Error loading reminder for edit:', error);
+      toast.error('Failed to load reminder');
     }
-
-    const latestReminder = await response.json();
-
-    setEditingReminder(latestReminder);
-
-    // Convert UTC date to local datetime-local format
-    const date = new Date(latestReminder.due_date);
-
-    const localDateString = new Date(
-      date.getTime() - date.getTimezoneOffset() * 60000
-    )
-      .toISOString()
-      .slice(0, 16);
-
-    const descriptions = latestReminder.description
-      ? latestReminder.description.split('|||')
-      : [''];
-
-    setFormData({
-      title: latestReminder.title,
-
-      descriptions: descriptions.map((text: string) => ({
-        text,
-        dueDate: localDateString,
-        remindBefore: latestReminder.remind_before,
-        remindUnit: latestReminder.remind_unit,
-      })),
-
-      userEmail: latestReminder.user_email,
-      phoneNumber: latestReminder.phoneNumber || '',
-
-      isEnabled:
-        typeof latestReminder.is_enabled === 'boolean'
-          ? latestReminder.is_enabled
-          : true,
-    });
-
-    setShowEditForm(true);
-  } catch (error) {
-    console.error('Error loading reminder for edit:', error);
-    toast.error('Failed to load reminder');
-  }
-};
-
-  // const resetForm = () => {
-  //   setFormData({
-  //     title: '',
-  //     descriptions: [
-  //       {
-  //         text: '',
-  //         dueDate: '',
-  //         remindBefore: 1,
-  //         remindUnit: 'days',
-  //       },
-  //     ],
-  //     userEmail: '',
-  //     phoneNumber: '',
-  //   });
-  // };
-
-  const resetForm = () => {
-  setFormData({
-    title: '',
-
-    descriptions: [
-      {
-        text: '',
-        dueDate: '',
-        remindBefore: 1,
-        remindUnit: 'days',
-      },
-    ],
-
-    userEmail: '',
-    phoneNumber: '',
-    isEnabled: true,
-  });
-};
-
-  // Simple update - send the local datetime string as-is
-  // const handleUpdateSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-
-  //   if (!editingReminder) return;
-
-  //   try {
-  //     // Correctly convert local datetime to UTC ISO string
-  //     const date = new Date(formData.dueDate);
-  //     if (isNaN(date.getTime())) {
-  //       toast.error('Invalid date');
-  //       return;
-  //     }
-  //     const utcDueDate = date.toISOString();
-
-  //     const response = await fetch('/api/reminders/update', {
-  //       method: 'PUT',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({
-  //         ...formData,
-  //         description: formData.descriptions.filter(d => d.trim() !== '').join('|||'),
-  //         id: editingReminder.id,
-  //         dueDate: utcDueDate, // Send actual UTC ISO string
-  //         fcmToken: fcmToken,
-  //       }),
-  //     });
-
-  //     if (response.ok) {
-  //       resetForm();
-  //       setEditingReminder(null);
-  //       setShowEditForm(false);
-  //       refetch();
-  //       toast.success('Reminder updated successfully!');
-  //     } else {
-  //       const error = await response.json();
-  //       toast.error(`Error: ${error.error}`);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error updating reminder:', error);
-  //     toast.error('Failed to update reminder');
-  //   }
-  // };
-
+  };
 
   const handleUpdateSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
+    if (!editingReminder) return;
 
-  if (!editingReminder) return;
+    try {
+      const firstDueDate = formData.descriptions[0]?.dueDate;
+      const date = new Date(firstDueDate);
+      if (isNaN(date.getTime())) {
+        toast.error('Invalid date');
+        return;
+      }
 
-  try {
-    const firstDueDate = formData.descriptions[0]?.dueDate;
+      const utcDueDate = date.toISOString();
 
-    const date = new Date(firstDueDate);
+      const response = await fetch('/api/reminders/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingReminder.id,
+          title: formData.title,
+          description: formData.descriptions
+            .map((d) => d.text)
+            .filter((text) => text.trim() !== '')
+            .join('|||'),
+          dueDate: utcDueDate,
+          remindBefore: formData.descriptions[0]?.remindBefore || 1,
+          remindUnit: formData.descriptions[0]?.remindUnit || 'days',
+          userEmail: formData.userEmail,
+          phoneNumber: formData.phoneNumber || null,
+          isEnabled: formData.isEnabled,
+          fcmToken,
+        }),
+      });
 
-    if (isNaN(date.getTime())) {
-      toast.error('Invalid date');
-      return;
-    }
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        toast.error(`Error: ${error?.error || response.statusText}`);
+        return;
+      }
 
-    const utcDueDate = date.toISOString();
-
-    const response = await fetch('/api/reminders/update', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-
-      body: JSON.stringify({
-        id: editingReminder.id,
-
-        title: formData.title,
-
-        description: formData.descriptions
-          .map((d) => d.text)
-          .filter((text) => text.trim() !== '')
-          .join('|||'),
-
-        dueDate: utcDueDate,
-
-        remindBefore:
-          formData.descriptions[0]?.remindBefore || 1,
-
-        remindUnit:
-          formData.descriptions[0]?.remindUnit || 'days',
-
-        userEmail: formData.userEmail,
-
-        phoneNumber: formData.phoneNumber || null,
-
-        isEnabled: formData.isEnabled,
-
-        fcmToken,
-      }),
-    });
-
-    if (response.ok) {
       resetForm();
-
       setEditingReminder(null);
-
       setShowEditForm(false);
-
       refetch();
-
       toast.success('Reminder updated successfully!');
-    } else {
-      const error = await response.json();
-
-      toast.error(`Error: ${error.error}`);
+    } catch (error) {
+      console.error('Error updating reminder:', error);
+      toast.error('Failed to update reminder');
     }
-  } catch (error) {
-    console.error('Error updating reminder:', error);
-
-    toast.error('Failed to update reminder');
-  }
-};
-
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [openMenuForId, setOpenMenuForId] = useState<number | null>(null);
-
-// const addDescriptionField = () => {
-//   setFormData((prev) => {
-//     const lastDesc = prev.descriptions[prev.descriptions.length - 1];
-
-//     if (prev.descriptions.length === 1 && !lastDesc.text.trim()) {
-//       toast.warn('Add your first description');
-//       return prev;
-//     }
-
-//     return {
-//       ...prev,
-//       descriptions: [
-//         ...prev.descriptions,
-//         {
-//           text: '',
-//           dueDate: '',
-//           remindBefore: 1,
-//           remindUnit: 'days',
-//         },
-//       ],
-//     };
-//   });
-// };
-
-
-const addDescriptionField = () => {
-  setFormData((prev) => {
-    const lastDesc = prev.descriptions[prev.descriptions.length - 1];
-
-    // Validate current description block first
-    const isIncomplete =
-      !lastDesc.text.trim() ||
-      !lastDesc.dueDate ||
-      !lastDesc.remindBefore ||
-      !lastDesc.remindUnit;
-
-    if (isIncomplete) {
-      toast.warn(
-        'Please complete Description, Due Date and Remind Me first'
-      );
-
-      return prev;
-    }
-
-    return {
-      ...prev,
-      descriptions: [
-        ...prev.descriptions,
-        {
-          text: '',
-          dueDate: '',
-          remindBefore: 1,
-          remindUnit: 'days',
-        },
-      ],
-    };
-  });
-};
-
-const removeDescriptionField = (index: number) => {
-  // Prevent deleting the first field
-  if (index === 0) return;
-
-  setFormData((prev) => ({
-    ...prev,
-    descriptions: prev.descriptions.filter((_, i) => i !== index),
-  }));
-};
-
-const updateDescriptionField = (
-  index: number,
-  patch: Partial<(typeof formData.descriptions)[number]>
-) => {
-  const next = [...formData.descriptions];
-  next[index] = { ...next[index], ...patch };
-  setFormData({ ...formData, descriptions: next });
-};
+  };
 
   const handleDelete = async (id: number) => {
     if (deletingId === id) return;
@@ -622,19 +462,8 @@ const updateDescriptionField = (
     try {
       const toastId = toast.loading('Deleting reminder...');
 
-      const response = await fetch(`/api/reminders/delete?id=${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        await refetch();
-        toast.update(toastId, {
-          render: 'Reminder deleted successfully!',
-          type: 'success',
-          isLoading: false,
-          autoClose: 3000,
-        });
-      } else {
+      const response = await fetch(`/api/reminders/delete?id=${id}`, { method: 'DELETE' });
+      if (!response.ok) {
         const error = await response.json().catch(() => null);
         toast.update(toastId, {
           render: error?.error ? `Error: ${error.error}` : 'Failed to delete reminder',
@@ -642,7 +471,16 @@ const updateDescriptionField = (
           isLoading: false,
           autoClose: 5000,
         });
+        return;
       }
+
+      await refetch();
+      toast.update(toastId, {
+        render: 'Reminder deleted successfully!',
+        type: 'success',
+        isLoading: false,
+        autoClose: 3000,
+      });
     } catch (error) {
       console.error('Error deleting reminder:', error);
       toast.error('Failed to delete reminder');
@@ -651,62 +489,28 @@ const updateDescriptionField = (
     }
   };
 
-  useEffect(() => {
-    const handleDocumentMouseDown = (e: MouseEvent) => {
-      if (openMenuForId === null) return;
-
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-
-      const menuContainer = target.closest('[data-reminder-menu="true"]');
-      if (menuContainer) return;
-
-      setOpenMenuForId(null);
-    };
-
-    document.addEventListener('mousedown', handleDocumentMouseDown);
-    return () => {
-      document.removeEventListener('mousedown', handleDocumentMouseDown);
-    };
-  }, [openMenuForId]);
-
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-
-    const date = new Date(dateString);
-    return date
-      .toLocaleString('en-GB', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      })
-      .replace(',', '');
+    return new Date(dateString).toLocaleString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).replace(',', '');
   };
 
-  const getReminderText = (reminder: Reminder) => {
-    return `Remind ${reminder.remind_before} ${reminder.remind_unit} before due date`;
-  };
-
-  if (loading) {
-    return <Loading />;
-  }
+  if (loading) return <Loading />;
 
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
         <div className="card-neon rounded-lg p-6 mb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                ⏰ Reminder App
-              </h1>
-              <p className="text-white/60 mt-2 text-sm sm:text-base">
-                Never miss important events or payments again
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">⏰ Reminder App</h1>
+              <p className="text-white/60 mt-2 text-sm sm:text-base">Never miss important events or payments again</p>
             </div>
             <button
               onClick={() => setShowForm(!showForm)}
@@ -717,7 +521,6 @@ const updateDescriptionField = (
           </div>
         </div>
 
-        {/* Add Reminder Form */}
         {showForm && (
           <div className="card-neon rounded-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4 text-white/90">Add New Reminder</h2>
@@ -730,7 +533,7 @@ const updateDescriptionField = (
                     required
                     className="alarm-input"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
                     placeholder="e.g., Pay electricity bill"
                   />
                 </div>
@@ -742,77 +545,68 @@ const updateDescriptionField = (
                     required
                     className="alarm-input"
                     value={formData.userEmail}
-                    onChange={(e) => setFormData({ ...formData, userEmail: e.target.value })}
+                    onChange={(e) => setFormData((p) => ({ ...p, userEmail: e.target.value }))}
                     placeholder="you@example.com"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-white/70 mb-3">Descriptions (each has its own Due Date & Remind Me)</label>
+                  <label className="block text-sm font-medium text-white/70 mb-3">
+                    Descriptions (each has its own Due Date &amp; Remind Me)
+                  </label>
 
-                  <div className="space-y-4">
-                    {/* {formData.descriptions.map((desc, index) => (
-                      <div
-                        key={index}
-                        className="rounded-lg border border-white/10 p-4 space-y-3"
-                      >
-                        <div className="flex items-center gap-2">
+                  {/* IMPORTANT: small = 1 column, large = 2 columns */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {formData.descriptions.map((desc, index) => (
+                      <div key={index} className="rounded-lg border border-white/10 p-4">
+                        <div className="flex items-center gap-2 mb-3">
                           <div className="flex-1">
-                            <label className="block text-sm font-medium text-white/70 mb-1">
-                              Description {index + 1}
-                            </label>
+                            <label className="block text-sm font-medium text-white/70 mb-1">Description {index + 1}</label>
                             <input
                               type="text"
                               className="alarm-input"
                               value={desc.text}
-                              required={index === 0}
-                              onChange={(e) =>
-                                updateDescriptionField(index, { text: e.target.value })
-                              }
-                              placeholder={
-                                index === 0
-                                  ? 'Additional details'
-                                  : `Additional details ${index + 1}`
-                              }
+                              onChange={(e) => updateDescriptionField(index, { text: e.target.value })}
+                              placeholder={index === 0 ? 'Additional details' : `Additional details ${index + 1}`}
                             />
                           </div>
 
-                          {index === 0 && (
-                            <button
-                              type="button"
-                              aria-label="Add another description"
-                              title="Add description"
-                              onClick={addDescriptionField}
-                              className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
-                            >
-                              <span className="text-2xl leading-none">+</span>
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {index === formData.descriptions.length - 1 && (
+                              <button
+                                type="button"
+                                aria-label="Add another description"
+                                title="Add description"
+                                onClick={addDescriptionField}
+                                className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
+                              >
+                                <span className="text-2xl leading-none">+</span>
+                              </button>
+                            )}
 
-                          {index !== 0 && (
-                            <button
-                              type="button"
-                              aria-label={`Delete description ${index + 1}`}
-                              title="Delete"
-                              onClick={() => removeDescriptionField(index)}
-                              className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
-                            >
-                              <span className="text-xl leading-none">×</span>
-                            </button>
-                          )}
+                            {index !== 0 && (
+                              <button
+                                type="button"
+                                aria-label={`Delete description ${index + 1}`}
+                                title="Delete"
+                                onClick={() => removeDescriptionField(index)}
+                                className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
+                              >
+                                <span className="text-xl leading-none">×</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-3">
                           <div>
-                            <label className="block text-sm font-medium text-white/70 mb-1">Due Date & Time *</label>
+                            <label className="block text-sm font-medium text-white/70 mb-1">Due Date &amp; Time *</label>
                             <input
                               type="datetime-local"
                               required
                               className="alarm-input"
                               value={desc.dueDate}
-                              onChange={(e) =>
-                                updateDescriptionField(index, { dueDate: e.target.value })
-                              }
+                              onChange={(e) => updateDescriptionField(index, { dueDate: e.target.value })}
                             />
                           </div>
 
@@ -841,182 +635,47 @@ const updateDescriptionField = (
                           </div>
                         </div>
                       </div>
-                    ))} */}
+                    ))}
 
-                    {formData.descriptions.map((desc, index) => (
-  <div
-    key={index}
-    className="rounded-lg border border-white/10 p-4 space-y-3"
-  >
-    <div className="flex items-center gap-2">
-      <div className="flex-1">
-        <label className="block text-sm font-medium text-white/70 mb-1">
-          Description {index + 1}
-        </label>
+                    <div className="rounded-lg border border-white/10 p-4">
+                      <label className="block text-sm font-medium text-white/70 mb-1">Phone Number (for SMS - optional)</label>
+                      <input
+                        type="tel"
+                        className="alarm-input"
+                        placeholder="e.g., +1234567890 or 0712345678"
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData((p) => ({ ...p, phoneNumber: e.target.value }))}
+                      />
+                      <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
+                    </div>
 
-        <input
-          type="text"
-          className="alarm-input"
-          value={desc.text}
-          onChange={(e) =>
-            updateDescriptionField(index, {
-              text: e.target.value,
-            })
-          }
-          placeholder={
-            index === 0
-              ? 'Additional details'
-              : `Additional details ${index + 1}`
-          }
-        />
-      </div>
-
-      {/* {index !== 0 && (
-        <button
-          type="button"
-          aria-label={`Delete description ${index + 1}`}
-          title="Delete"
-          onClick={() => removeDescriptionField(index)}
-          className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
-        >
-          <span className="text-xl leading-none">×</span>
-        </button>
-      )} */}
-
-      <div className="flex items-center gap-2">
-  {/* SHOW PLUS BUTTON ONLY ON LAST ITEM */}
-  {index === formData.descriptions.length - 1 && (
-    <button
-      type="button"
-      aria-label="Add another description"
-      title="Add description"
-      onClick={addDescriptionField}
-      className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
-    >
-      <span className="text-2xl leading-none">+</span>
-    </button>
-  )}
-
-  {/* HIDE DELETE BUTTON FOR FIRST ITEM */}
-  {index !== 0 && (
-    <button
-      type="button"
-      aria-label={`Delete description ${index + 1}`}
-      title="Delete"
-      onClick={() => removeDescriptionField(index)}
-      className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
-    >
-      <span className="text-xl leading-none">×</span>
-    </button>
-  )}
-</div>
-    </div>
-
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div>
-        <label className="block text-sm font-medium text-white/70 mb-1">
-          Due Date & Time *
-        </label>
-
-        <input
-          type="datetime-local"
-          required
-          className="alarm-input"
-          value={desc.dueDate}
-          onChange={(e) =>
-            updateDescriptionField(index, {
-              dueDate: e.target.value,
-            })
-          }
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-white/70 mb-1">
-          Remind Me *
-        </label>
-
-        <div className="flex gap-2 items-stretch">
-          <input
-            type="number"
-            min="1"
-            required
-            className="flex-1 alarm-input"
-            value={String(desc.remindBefore)}
-            onChange={(e) => {
-              const raw = e.target.value;
-
-              const next =
-                raw === ''
-                  ? 0
-                  : Number.parseInt(raw, 10);
-
-              updateDescriptionField(index, {
-                remindBefore: next,
-              });
-            }}
-          />
-
-          <CustomDropdown
-            value={desc.remindUnit}
-            onChange={(val) =>
-              updateDescriptionField(index, {
-                remindUnit: val,
-              })
-            }
-            options={unitOptions}
-            className="flex-1"
-          />
-        </div>
-      </div>
-    </div>
-  </div>
-))}
+                    <div className="mt-2 sm:col-span-2 lg:col-span-2">
+                      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                        <button
+                          type="submit"
+                          className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
+                        >
+                          Create Reminder
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetForm();
+                            setShowForm(false);
+                          }}
+                          className="alarm-btn alarm-btn--danger cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">
-                    Phone Number (for SMS - optional)
-                  </label>
-                  <input
-                    type="tel"
-                    className="alarm-input"
-                    placeholder="e.g., +1234567890 or 0712345678"
-                    value={formData.phoneNumber}
-                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  />
-                  <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button type="submit" className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6">
-                  Create Reminder
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetForm();
-                    setShowForm(false);
-                  }}
-                  className="alarm-btn alarm-btn--danger cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
-                >
-                  Cancel
-                </button>
               </div>
             </form>
           </div>
         )}
 
-
-
-
-
-
-
-
-        {/* Edit Reminder Form */}
         {showEditForm && editingReminder && (
           <div className="card-neon rounded-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4 text-white/90">Edit Reminder</h2>
@@ -1029,7 +688,7 @@ const updateDescriptionField = (
                     required
                     className="alarm-input"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
                   />
                 </div>
 
@@ -1040,262 +699,133 @@ const updateDescriptionField = (
                     required
                     className="alarm-input"
                     value={formData.userEmail}
-                    onChange={(e) => setFormData({ ...formData, userEmail: e.target.value })}
+                    onChange={(e) => setFormData((p) => ({ ...p, userEmail: e.target.value }))}
                   />
                 </div>
 
-                {/* <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">Due Date & Time *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    className="alarm-input"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                  />
-                </div> */}
-{/* 
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">
-                    Description (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    className="alarm-input"
-                    value={formData.descriptions[0] ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        descriptions: [e.target.value, ...(formData.descriptions.slice(1) ?? [])],
-                      })
-                    }
-                  />
-                </div> */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-white/70 mb-3">Descriptions (Edit)</label>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {formData.descriptions.map((desc, index) => (
+                      <div key={index} className="rounded-lg border border-white/10 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-white/70 mb-1">Description {index + 1}</label>
+                            <input
+                              type="text"
+                              className="alarm-input"
+                              value={desc.text}
+                              onChange={(e) => updateDescriptionField(index, { text: e.target.value })}
+                              placeholder={index === 0 ? 'Additional details' : `Additional details ${index + 1}`}
+                            />
+                          </div>
 
-                
-                  <div className="space-y-3">
-                    <label className="block text-sm font-medium text-white/70 mb-1">
-                      Description (Optional)
-                    </label>
+                          <div className="flex items-center gap-2">
+                            {index === formData.descriptions.length - 1 && (
+                              <button
+                                type="button"
+                                aria-label="Add another description"
+                                title="Add description"
+                                onClick={addDescriptionField}
+                                className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
+                              >
+                                <span className="text-2xl leading-none">+</span>
+                              </button>
+                            )}
 
-                    {/* {formData.descriptions.map((desc, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <input
-                            type="text"
-                            className="alarm-input"
-                            value={desc}
-                            onChange={(e) => updateDescription(index, e.target.value)}
-                            placeholder={index === 0 ? 'Additional details' : `Additional details ${index + 1}`}
-                          />
+                            {index !== 0 && (
+                              <button
+                                type="button"
+                                aria-label={`Delete description ${index + 1}`}
+                                title="Delete"
+                                onClick={() => removeDescriptionField(index)}
+                                className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
+                              >
+                                <span className="text-xl leading-none">×</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
-                {index !== 0 && (
-                    <button
-                      type="button"
-                      aria-label={`Delete description ${index + 1}`}
-                      title="Delete"
-                      onClick={() => removeDescriptionField(index)}
-                      className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
-                    >
-                      <span className="text-xl leading-none">×</span>
-                    </button>
-                  )}
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-white/70 mb-1">Due Date &amp; Time *</label>
+                            <input
+                              type="datetime-local"
+                              required
+                              className="alarm-input"
+                              value={desc.dueDate}
+                              onChange={(e) => updateDescriptionField(index, { dueDate: e.target.value })}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-white/70 mb-1">Remind Me *</label>
+                            <div className="flex gap-2 items-stretch">
+                              <input
+                                type="number"
+                                min="1"
+                                required
+                                className="flex-1 alarm-input"
+                                value={String(desc.remindBefore)}
+                                onChange={(e) => {
+                                  const raw = e.target.value;
+                                  const next = raw === '' ? 0 : Number.parseInt(raw, 10);
+                                  updateDescriptionField(index, { remindBefore: next });
+                                }}
+                              />
+                              <CustomDropdown
+                                value={desc.remindUnit}
+                                onChange={(val) => updateDescriptionField(index, { remindUnit: val })}
+                                options={unitOptions}
+                                className="flex-1"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    ))} */}
+                    ))}
 
-                    {formData.descriptions.map((desc, index) => (
-  <div
-    key={index}
-    className="rounded-lg border border-white/10 p-4 space-y-3"
-  >
-    <div className="flex items-center gap-2">
-      <div className="flex-1">
-        <label className="block text-sm font-medium text-white/70 mb-1">
-          Description {index + 1}
-        </label>
+                    <div className="rounded-lg border border-white/10 p-4">
+                      <label className="block text-sm font-medium text-white/70 mb-1">Phone Number (for SMS - optional)</label>
+                      <input
+                        type="tel"
+                        className="alarm-input"
+                        placeholder="e.g., +1234567890 or 0712345678"
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData((p) => ({ ...p, phoneNumber: e.target.value }))}
+                      />
+                      <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
+                    </div>
 
-        <input
-          type="text"
-          className="alarm-input"
-          value={desc.text}
-          onChange={(e) =>
-            updateDescriptionField(index, {
-              text: e.target.value,
-            })
-          }
-          placeholder={
-            index === 0
-              ? 'Additional details'
-              : `Additional details ${index + 1}`
-          }
-        />
-      </div>
-
-      {/* {index !== 0 && (
-        <button
-          type="button"
-          aria-label={`Delete description ${index + 1}`}
-          title="Delete"
-          onClick={() => removeDescriptionField(index)}
-          className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
-        >
-          <span className="text-xl leading-none">×</span>
-        </button>
-      )} */}
-
-      <div className="flex items-center gap-2">
-  {/* SHOW PLUS BUTTON ONLY ON LAST ITEM */}
-  {index === formData.descriptions.length - 1 && (
-    <button
-      type="button"
-      aria-label="Add another description"
-      title="Add description"
-      onClick={addDescriptionField}
-      className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
-    >
-      <span className="text-2xl leading-none">+</span>
-    </button>
-  )}
-
-  {/* HIDE DELETE BUTTON FOR FIRST ITEM */}
-  {index !== 0 && (
-    <button
-      type="button"
-      aria-label={`Delete description ${index + 1}`}
-      title="Delete"
-      onClick={() => removeDescriptionField(index)}
-      className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white/90 hover:text-white transition"
-    >
-      <span className="text-xl leading-none">×</span>
-    </button>
-  )}
-</div>
-    </div>
-
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div>
-        <label className="block text-sm font-medium text-white/70 mb-1">
-          Due Date & Time *
-        </label>
-
-        <input
-          type="datetime-local"
-          required
-          className="alarm-input"
-          value={desc.dueDate}
-          onChange={(e) =>
-            updateDescriptionField(index, {
-              dueDate: e.target.value,
-            })
-          }
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-white/70 mb-1">
-          Remind Me *
-        </label>
-
-        <div className="flex gap-2 items-stretch">
-          <input
-            type="number"
-            min="1"
-            required
-            className="flex-1 alarm-input"
-            value={String(desc.remindBefore)}
-            onChange={(e) => {
-              const raw = e.target.value;
-
-              const next =
-                raw === ''
-                  ? 0
-                  : Number.parseInt(raw, 10);
-
-              updateDescriptionField(index, {
-                remindBefore: next,
-              });
-            }}
-          />
-
-          <CustomDropdown
-            value={desc.remindUnit}
-            onChange={(val) =>
-              updateDescriptionField(index, {
-                remindUnit: val,
-              })
-            }
-            options={unitOptions}
-            className="flex-1"
-          />
-        </div>
-      </div>
-    </div>
-  </div>
-))}
+                    <div className="mt-2 sm:col-span-2 lg:col-span-2">
+                      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                        <button
+                          type="submit"
+                          className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
+                        >
+                          Update Reminder
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetForm();
+                            setEditingReminder(null);
+                            setShowEditForm(false);
+                          }}
+                          className="alarm-btn alarm-btn--danger cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">
-                    Phone Number (for SMS - optional)
-                  </label>
-                  <input
-                    type="tel"
-                    className="alarm-input"
-                    placeholder="e.g., +1234567890 or 0712345678"
-                    value={formData.phoneNumber}
-                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  />
-                  <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
                 </div>
-
-                {/* <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">Remind Me</label>
-                      <div className="flex gap-2 items-stretch">
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      className="flex-1 alarm-input"
-                      value={String(formData.remindBefore)}
-
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        const next = raw === '' ? 0 : Number.parseInt(raw, 10);
-                        setFormData({ ...formData, remindBefore: next });
-                      }}
-                    />
-                    <CustomDropdown
-                      value={formData.remindUnit}
-                      onChange={(val) => setFormData({ ...formData, remindUnit: val })}
-                      options={unitOptions}
-                      className="flex-1"
-                    />
-                  </div>
-                </div> */}
-              </div>
-
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button type="submit" className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6">
-                  Update Reminder
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetForm();
-                    setEditingReminder(null);
-                    setShowEditForm(false);
-                  }}
-                  className="alarm-btn alarm-btn--danger cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
-                >
-                  Cancel
-                </button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Reminders List */}
         <div className="card-neon rounded-lg">
           <div className="p-6 border-b border-white/10">
             <h2 className="text-xl font-semibold text-white">Your Reminders</h2>
@@ -1311,147 +841,214 @@ const updateDescriptionField = (
             </div>
           ) : (
             <div className="divide-y divide-white/10">
-              {(Array.isArray(reminders) ? reminders : []).map((reminder, idx) => (
-                <div
-                  key={reminder.id}
-                  className="p-6 alarm-list-item"
-                  style={{ animationDelay: `${Math.min(idx * 60, 420)}ms` }}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="min-w-0 flex items-center gap-3">
-                          <h3 className="text-lg font-semibold text-white wrap-break-word">
-                            {reminder.title}
-                          </h3>
+              {reminders.map((reminder) => (
+                <div key={reminder.id} className="p-6 alarm-list-item">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-semibold text-white">{reminder.title}</h3>
+                          <p className="text-white/50 text-sm">{reminder.user_email}</p>
                         </div>
 
-
-                        <div className="relative flex items-center justify-end w-full sm:w-auto">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`alarm-badge ${reminder.is_sent ? 'alarm-badge--sent' : 'alarm-badge--pending'}`}
-                            >
-                              {reminder.is_sent ? 'Sent' : 'Pending'}
-                            </span>
-
-                            <div className="flex items-center gap-2">
+                        {/* Parent reminder enabled toggle (styled/positioned to match pre-switch layout) */}
+                        <div className="flex items-center shrink-0">
                             <Switch
-                                isChecked={
-                                  typeof reminder.is_enabled === "boolean"
-                                    ? reminder.is_enabled
-                                    : true
+                            className="alarm-switch alarm-switch--parent"
+checked={!!reminder.is_enabled}
+
+                            onChange={async (e) => {
+                              const nextEnabled = e.target.checked;
+
+                              try {
+                                // Optimistic UI update
+                                setReminders((prev) =>
+                                  prev.map((r) =>
+                                    r.id === reminder.id ? { ...r, is_enabled: nextEnabled } : r
+                                  )
+                                );
+
+                                // Include existing reminder data because update endpoint also updates reminder_items
+                                const items = reminder.reminder_items ?? [];
+                                const firstItem = items[0];
+
+                                const payload = {
+                                  id: reminder.id,
+                                  title: reminder.title,
+                                  userEmail: reminder.user_email,
+                                  phoneNumber: reminder.phone_number ?? null,
+                                  isEnabled: nextEnabled,
+                                  description: items.map((it) => it.description ?? '').join('|||'),
+                                  dueDate: firstItem?.due_date ?? new Date().toISOString(),
+                                  remindBefore: firstItem?.remind_before ?? 1,
+                                  remindUnit: firstItem?.remind_unit ?? 'days',
+                                  fcmToken,
+                                };
+
+                                const res = await fetch('/api/reminders/update', {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify(payload),
+                                });
+
+                                if (!res.ok) {
+                                  const err = await res.json().catch(() => null);
+                                  throw new Error(err?.error || res.statusText);
                                 }
-                                onChange={async (e: ChangeEvent<HTMLInputElement>) => {
-                                  const nextEnabled = e.target.checked;
 
-                                  setReminders((prev) =>
-                                    prev.map((r) =>
-                                      r.id === reminder.id
-                                        ? { ...r, is_enabled: nextEnabled }
-                                        : r
-                                    )
-                                  );
-
-                                  try {
-                                    await fetch("/api/reminders/update", {
-                                      method: "PUT",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({
-                                        id: reminder.id,
-                                        title: reminder.title,
-                                        description: reminder.description,
-                                        dueDate: reminder.due_date,
-                                        remindBefore: reminder.remind_before,
-                                        remindUnit: reminder.remind_unit,
-                                        userEmail: reminder.user_email,
-                                        isEnabled: nextEnabled,
-                                        fcmToken,
-                                      }),
-                                    });
-
-                                    refetch();
-                                  } catch (err) {
-                                    toast.error("Failed to update reminder status");
-                                    refetch();
-                                  }
-                                }}
-                                colorScheme="orange"
-                              />
-                            </div>
-
-                            <div className="hidden sm:flex relative items-center">
-                              <button
-                                type="button"
-                                aria-label="Open reminder actions"
-                                title="Actions"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenuForId((prev) => (prev === reminder.id ? null : reminder.id));
-                                }}
-                                className="inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-pointer hover:bg-white/5 transition"
-                              >
-                                <span className="text-white/70 text-xl leading-none">⋮</span>
-                              </button>
-
-                              {openMenuForId === reminder.id && (
-                                <div
-                                  data-reminder-menu="true"
-                                  className="absolute right-0 mt-2 w-32 alarm-dropdown rounded-lg shadow-lg overflow-hidden z-10 border border-white/10"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuForId(null);
-                                      handleEditClick(reminder);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-sm text-white/85 cursor-pointer hover:bg-white/5"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuForId(null);
-                                      handleDelete(reminder.id);
-                                    }}
-                                    disabled={deletingId === reminder.id}
-                                    className={`w-full text-left px-3 py-2 text-sm transition ${
-                                      deletingId === reminder.id
-                                        ? 'text-white/25 cursor-not-allowed bg-transparent'
-                                        : 'text-[rgba(255,59,92,0.95)] cursor-pointer hover:bg-[rgba(255,59,92,0.08)]'
-                                    }`}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                                toast.success(nextEnabled ? 'Reminder enabled' : 'Reminder disabled');
+                                await refetch();
+                              } catch (error) {
+                                // Revert on failure
+                                setReminders((prev) =>
+                                  prev.map((r) =>
+                                    r.id === reminder.id ? { ...r, is_enabled: !nextEnabled } : r
+                                  )
+                                );
+                                console.error('Error toggling reminder:', error);
+                                toast.error('Failed to update reminder toggle');
+                              }
+                            }}
+                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ffb020' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#ffb020' }, '& .MuiSwitch-track': { backgroundColor: 'rgba(255,176,32,0.35)' } }}
+                          />
                         </div>
+
                       </div>
 
-                      {reminder.description && (
-                        <div className="space-y-1 mb-2">
-                          {reminder.description.split('|||').map((desc, i) => (
-                            <p key={i} className="text-white/65 flex items-start gap-2">
-                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-white/30 flex-shrink-0" />
-                              {desc}
-                            </p>
-                          ))}
-                        </div>
-                      )}
+                      <div className="mt-3 space-y-3">
+                        {reminder.reminder_items?.map((item) => (
+                          <div key={item.id} className="border border-white/10 rounded-lg p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p
+                                  className="text-white/80 font-medium truncate max-w-full"
+                                  title={item.description}
+                                >
+                                  {item.description}
+                                </p>
+                                <p className="text-white/60 text-sm">📅 {formatDate(item.due_date)}</p>
+                                <p className="text-[rgba(255,176,32,0.95)] text-sm">
+                                  ⏰ {item.remind_before} {item.remind_unit}
+                                </p>
+                              </div>
 
-                      <div className="flex flex-wrap gap-3 text-sm">
-                        <span className="text-white/55">📅 Due: {formatDate(reminder.due_date)}</span>
-                        <span className="text-[rgba(255,176,32,0.95)]">⏰ {getReminderText(reminder)}</span>
-                        <span className="text-white/55">📧 {reminder.user_email}</span>
+                              {/* Item enable toggle (no longer absolute/overlapping) */}
+                              <div className="shrink-0 mt-0.5">
+                                  <Switch
+                                  checked={item.is_enabled !== false}
+                                  onChange={async (e) => {
+
+                                    const nextEnabled = e.target.checked;
+                                    try {
+                                      // Optimistic UI update
+                                      setReminders((prev) =>
+                                        prev.map((r) =>
+                                          r.id === reminder.id
+                                            ? {
+                                                ...r,
+                                                reminder_items: (r.reminder_items ?? []).map((it) =>
+                                                  it.id === item.id ? { ...it, is_enabled: nextEnabled } : it
+                                                ),
+                                              }
+                                            : r
+                                        )
+                                      );
+
+                                      const res = await fetch('/api/reminders/toggle-item', {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: item.id, isEnabled: nextEnabled }),
+                                      });
+
+                                      if (!res.ok) {
+                                        const err = await res.json().catch(() => null);
+                                        throw new Error(err?.error || res.statusText);
+                                      }
+
+                                      toast.success(nextEnabled ? 'Description enabled' : 'Description disabled');
+                                      await refetch();
+                                    } catch (error) {
+                                      // Revert on failure
+                                      setReminders((prev) =>
+                                        prev.map((r) =>
+                                          r.id === reminder.id
+                                            ? {
+                                                ...r,
+                                                reminder_items: (r.reminder_items ?? []).map((it) =>
+                                                  it.id === item.id ? { ...it, is_enabled: !nextEnabled } : it
+                                                ),
+                                              }
+                                            : r
+                                        )
+                                      );
+                                      console.error('Error toggling reminder item:', error);
+                                      toast.error('Failed to update description toggle');
+                                    }
+                                  }}
+                                  sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ffb020' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#ffb020' }, '& .MuiSwitch-track': { backgroundColor: 'rgba(255,176,32,0.35)' } }}
+                                />
+
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
-                    <div className="relative flex items-center">
-                      <div className="flex gap-2 sm:hidden">
+                    <div className="relative flex items-center justify-end sm:w-auto w-full">
+                      {/* Desktop actions */}
+                      <div className="hidden sm:flex items-center">
+                        <button
+                          type="button"
+                          aria-label="Open reminder actions"
+                          title="Actions"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuForId((prev) => (prev === reminder.id ? null : reminder.id));
+                          }}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-pointer hover:bg-white/5 transition"
+                        >
+                          <span className="text-white/70 text-xl leading-none">⋮</span>
+                        </button>
+
+                        {openMenuForId === reminder.id && (
+                          <div
+                            data-reminder-menu="true"
+                            className="absolute right-0 mt-2 w-32 alarm-dropdown rounded-lg shadow-lg overflow-hidden z-10 border border-white/10"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuForId(null);
+                                handleEditClick(reminder);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm text-white/85 cursor-pointer hover:bg-white/5"
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuForId(null);
+                                handleDelete(reminder.id);
+                              }}
+                              disabled={deletingId === reminder.id}
+                              className={`w-full text-left px-3 py-2 text-sm transition ${
+                                deletingId === reminder.id
+                                  ? 'text-white/25 cursor-not-allowed bg-transparent'
+                                  : 'text-[rgba(255,59,92,0.95)] cursor-pointer hover:bg-[rgba(255,59,92,0.08)]'
+                              }`}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mobile actions */}
+                      <div className="flex sm:hidden gap-2">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1489,3 +1086,4 @@ const updateDescriptionField = (
     </div>
   );
 }
+

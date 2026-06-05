@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseService as supabase } from '@/lib/supabase';
+
 
 
 
@@ -9,15 +10,20 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
+
     if (!id) {
       return NextResponse.json({ error: 'ID required' }, { status: 400 });
     }
 
     const { data, error } = await supabase
       .from('reminders')
-      .select('*')
+      .select(`
+        *,
+        reminder_items (*)
+      `)
       .eq('id', id)
       .single();
+
 
     if (error) {
       console.error('Supabase error:', error);

@@ -9,8 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@chakra-ui/react": "^2.10.9",
     "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^9.0.1",
     "@supabase/supabase-js": "^2.105.1",
     "axios": "^1.15.2",
     "date-fns": "^4.1.0",
