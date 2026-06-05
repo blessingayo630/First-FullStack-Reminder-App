@@ -441,7 +441,7 @@ export async function GET() {
         )
       `)
       .eq('is_sent', false)
-      .eq('is_enabled', true);
+      // .eq('is_enabled', true);
 
 
     if (error) {
