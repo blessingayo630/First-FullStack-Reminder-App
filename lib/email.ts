@@ -1,4 +1,4 @@
-  import { Resend } from 'resend';
+import { Resend } from 'resend';
 
 interface Reminder {
   id: number;
@@ -31,7 +31,7 @@ export async function sendReminderEmail(reminder: Reminder) {
     const { error } = await resend.emails.send({
       from: 'Reminder App <onboarding@resend.dev>',
       to: [reminder.user_email],
-      subject: `🔔 REMINDER: ${reminder.title}`,
+      subject: `🔔 Reminder: ${reminder.title}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -115,7 +115,7 @@ export async function sendReminderEmail(reminder: Reminder) {
             : ''
         }
 
-        <!-- DUE DATE -->
+                <!-- DUE DATE -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
         style="background-color:#f3f4f6;border:1px solid #d1d5db;margin-bottom:15px;">
 
@@ -148,40 +148,8 @@ export async function sendReminderEmail(reminder: Reminder) {
 
         </table>
 
-        <!-- REMINDER -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0"
-        style="background-color:#f3f4f6;border:1px solid #d1d5db;">
-
-        <tr>
-        <td style="padding:18px;">
-
-        <p style="
-        margin:0 0 8px 0;
-        font-size:12px;
-        font-weight:bold;
-        color:#6b7280;
-        letter-spacing:1px;
-        font-family:Arial,sans-serif;
-        ">
-        REMINDER TIME
-        </p>
-
-        <p style="
-        margin:0;
-        font-size:16px;
-        font-weight:bold;
-        color:#111827;
-        font-family:Arial,sans-serif;
-        ">
-        ⏰ ${reminder.remind_before} ${reminder.remind_unit} before
-        </p>
-
-        </td>
-        </tr>
-
-        </table>
-
         <!-- BUTTON -->
+
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
         <td align="center" style="padding-top:35px;">
@@ -238,15 +206,14 @@ export async function sendReminderEmail(reminder: Reminder) {
         </body>
         </html>
         `,
-      
       text: `
-        REMINDER: ${reminder.title}
+        ${reminder.title}
 
-        ${reminder.description ? `${reminder.description}\n\n` : ''}
+                ${reminder.description ? `${reminder.description}\n\n` : ''}
         Due Date: ${dueDate}
-        Reminder: ${reminder.remind_before} ${reminder.remind_unit} before due date
       `,
     });
+
 
     if (error) {
       console.error('❌ Error sending email:', error);

@@ -221,6 +221,8 @@ export async function POST(req: Request) {
       due_date: item.dueDate,
       remind_before: item.remindBefore ?? 1,
       remind_unit: item.remindUnit ?? "days",
+      repeat_mode: item.repeatMode ?? 'once',
+      custom_weekdays: item.repeatMode === 'custom' ? item.customWeekdays ?? null : null,
       is_sent: false,
     }));
 

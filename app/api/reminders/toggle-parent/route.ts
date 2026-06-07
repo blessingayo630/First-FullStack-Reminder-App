@@ -6,7 +6,6 @@ export async function PUT(req: Request) {
     const body: unknown = await req.json();
     const { id, isEnabled } = body as { id?: number; isEnabled?: boolean };
 
-
     if (!id) {
       return NextResponse.json({ error: "Missing reminder id" }, { status: 400 });
     }
@@ -14,12 +13,21 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Missing isEnabled" }, { status: 400 });
     }
 
-    const { error } = await supabase
+    // Update parent
+    const { error: parentError } = await supabase
       .from("reminders")
       .update({ is_enabled: isEnabled })
       .eq("id", id);
 
-    if (error) throw error;
+    if (parentError) throw parentError;
+
+    // Update ALL sub-reminders to match the parent toggle
+    const { error: itemsError } = await supabase
+      .from("reminder_items")
+      .update({ is_enabled: isEnabled })
+      .eq("reminder_id", id);
+
+    if (itemsError) throw itemsError;
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -29,6 +37,7 @@ export async function PUT(req: Request) {
       { status: 500 }
     );
   }
-
 }
+
+
 

@@ -1,5 +1,7 @@
 {
     "recommendations": [
-        "anthropic.claude-code"
+        "anthropic.claude-code",
+        "vbrocket.cursor-ai",
+        "continue.continue"
     ]
 }

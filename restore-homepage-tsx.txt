@@ -1,0 +1,4 @@
+PASTE THE “GOOD” PRE-CHANGE app/components/HomePage.tsx FULL CONTENT HERE.
+
+Then I will overwrite app/components/HomePage.tsx with this content and re-apply the minimal Non Repeating navigation button.
+

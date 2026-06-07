@@ -420,11 +420,63 @@ if (!admin.apps.length) {
   }
 }
 
+function computeNextDueDate({
+  dueDateISO,
+  repeatMode,
+  customWeekdays,
+}: {
+  dueDateISO: string;
+  repeatMode: 'once' | 'daily' | 'mon_fri' | 'custom' | null;
+  customWeekdays: number[] | null;
+}): string | null {
+  if (!repeatMode || repeatMode === 'once') return null;
+
+  const due = new Date(dueDateISO);
+  // Use local time (Node honors process.env.TZ='Africa/Lagos')
+  const start = new Date(due.getTime());
+
+  // JS: 0=Sun ... 6=Sat
+  const isMatchCustom = (day: number) => {
+    // UI uses 1=Mon..7=Sun
+    // Convert to UI mapping: 1 Mon => JS day 1
+    // JS day 0 (Sun) => UI 7
+    const ui = day === 0 ? 7 : day;
+    return (customWeekdays ?? []).includes(ui);
+  };
+
+  if (repeatMode === 'daily') {
+    const next = new Date(start);
+    next.setDate(next.getDate() + 1);
+    return next.toISOString();
+  }
+
+  const isWeekdayMonFri = (day: number) => day >= 1 && day <= 5; // Mon=1..Fri=5
+
+  const shouldTake = (day: number) => {
+    if (repeatMode === 'mon_fri') return isWeekdayMonFri(day);
+    if (repeatMode === 'custom') return isMatchCustom(day);
+    return false;
+  };
+
+  // Find next matching day, starting from +1 day (so we don't re-send same occurrence)
+  for (let i = 1; i <= 3660; i++) {
+    const next = new Date(start);
+    next.setDate(next.getDate() + i);
+    if (shouldTake(next.getDay())) {
+      return next.toISOString();
+    }
+  }
+
+  // Safety fallback
+  return null;
+}
+
 export async function GET() {
   try {
     console.log('🕐 Cron job started...');
 
     const now = new Date();
+
 
     // FETCH ITEMS (only enabled items + enabled parent)
     const { data: items, error } = await supabase
@@ -440,8 +492,8 @@ export async function GET() {
           fcm_token
         )
       `)
-      .eq('is_sent', false)
-      // .eq('is_enabled', true);
+.eq('is_sent', false)
+      .eq('is_enabled', true);
 
 
     if (error) {
@@ -514,14 +566,19 @@ export async function GET() {
         continue;
       }
 
+
       // =========================
       // EMAIL
       // =========================
       try {
         emailSent = await sendReminderEmail({
-          ...reminder,
-          due_date: item.due_date,
+          id: reminder.id,
+          title: reminder.title,
           description: item.description,
+          due_date: item.due_date,
+          remind_before: item.remind_before ?? 1,
+          remind_unit: item.remind_unit ?? 'days',
+          user_email: reminder.user_email,
         });
 
         if (!emailSent) {
@@ -530,6 +587,8 @@ export async function GET() {
             .update({ is_sent: false })
             .eq('id', item.id);
         }
+
+
       } catch (err) {
         console.error(`❌ Email error item ${item.id}`, err);
 
@@ -586,12 +645,52 @@ export async function GET() {
       }
 
       // =========================
-      // TRACK SUCCESS
+      // TRACK SUCCESS + RESCHEDULE (for repeating reminders)
       // =========================
       if (emailSent || smsSent || pushSent) {
+        // Mark occurrence as processed, but if it's repeating, schedule the next one
+        if (item.repeat_mode && item.repeat_mode !== 'once') {
+          const nextDueDateISO = computeNextDueDate({
+            dueDateISO: item.due_date,
+            repeatMode: item.repeat_mode,
+            customWeekdays: item.custom_weekdays,
+          });
+
+          if (nextDueDateISO) {
+            await supabase
+              .from('reminder_items')
+              .update({
+                due_date: nextDueDateISO,
+                is_sent: false,
+              })
+              .eq('id', item.id);
+
+            console.log(`🔁 Rescheduled item ${item.id} to ${nextDueDateISO}`);
+          } else {
+            // If we can't compute next, fall back to one-shot behavior
+            await supabase
+              .from('reminder_items')
+              .update({ is_sent: true })
+              .eq('id', item.id);
+
+            console.log(`✅ Item ${item.id} marked as sent (no next due date computed)`);
+          }
+        } else {
+          // One-time: keep it sent (already locked as is_sent=true)
+          console.log(`✅ Item ${item.id} processed successfully`);
+        }
+
         sent++;
-        console.log(`✅ Item ${item.id} processed successfully`);
+      } else {
+        // Sending failed for this occurrence; allow retry on next cron
+        await supabase
+          .from('reminder_items')
+          .update({ is_sent: false })
+          .eq('id', item.id);
+
+        console.log(`❌ Item ${item.id} failed to send; leaving is_sent=false for retry`);
       }
+
     }
 
     return NextResponse.json({
