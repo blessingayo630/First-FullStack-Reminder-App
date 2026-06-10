@@ -523,8 +523,22 @@ export async function GET() {
       // =========================
       // ⏰ CALCULATE REMINDER TIME
       // =========================
+      // Debug repeating metadata + due dates
+      console.log('🧾 Cron item debug', {
+        item_id: item.id,
+        parent_id: reminder?.id,
+        due_date_stored: item.due_date,
+        remind_before: item.remind_before,
+        remind_unit: item.remind_unit,
+        repeat_mode_on_item: (item as { repeat_mode?: unknown }).repeat_mode,
+        custom_weekdays_on_item: (item as { custom_weekdays?: unknown }).custom_weekdays,
+
+        now_iso: now.toISOString(),
+      });
+
       const dueDate = new Date(item.due_date);
       const  reminderTime = new Date(dueDate);
+
 
       switch (item.remind_unit) {
         case 'minutes':

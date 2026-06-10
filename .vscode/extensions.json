@@ -2,6 +2,7 @@
     "recommendations": [
         "anthropic.claude-code",
         "vbrocket.cursor-ai",
-        "continue.continue"
+        "continue.continue",
+        "yalehuang.chatgpt-ai"
     ]
 }

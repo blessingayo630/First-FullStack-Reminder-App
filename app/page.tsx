@@ -1,11 +1,8 @@
 'use client'
 
-import HomePage from './components/HomePage'
+import LoginPage from './login/page'
 
 export default function Home() {
-  return (
-    <main>
-      <HomePage />
-    </main>
-  )
+  return <LoginPage />
 }
+

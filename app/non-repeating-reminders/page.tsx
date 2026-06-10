@@ -74,13 +74,14 @@ export default function NonRepeatingRemindersPage() {
     return () => window.clearInterval(intervalId);
   }, [refetch]);
 
-    const nonRepeatingReminders = useMemo(() => {
+  const nonRepeatingReminders = useMemo(() => {
     const withOnceItems = reminders
       .map((r) => {
         // Only show items that are 'once' AND have been sent (email message received)
         const items = (r.reminder_items ?? []).filter(
           (it) => (it.repeat_mode ?? 'once') === 'once' && it.is_sent
         );
+
         return {
           reminder: r,
           onceItems: items,
@@ -126,7 +127,7 @@ export default function NonRepeatingRemindersPage() {
         dueDate: firstItem?.due_date ?? new Date().toISOString(),
         remindBefore: firstItem?.remind_before ?? 1,
         remindUnit: firstItem?.remind_unit ?? 'days',
-      	repeatMode: firstItem?.repeat_mode ?? 'once',
+        repeatMode: firstItem?.repeat_mode ?? 'once',
         customWeekdays: firstItem?.repeat_mode === 'custom' ? null : null,
         fcmToken: null,
       };
@@ -164,7 +165,7 @@ export default function NonRepeatingRemindersPage() {
             </div>
             <button
               className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
-              onClick={() => (window.location.href = '/')}
+              onClick={() => (window.location.href = '/homepage')}
               type="button"
             >
               Back Home
@@ -218,7 +219,9 @@ export default function NonRepeatingRemindersPage() {
                           {it.description}
                         </p>
                         <p className="text-white/60 text-sm">📅 {formatDate(it.due_date)}</p>
-                        <p className="text-[rgba(255,176,32,0.95)] text-sm">⏰ {String(it.remind_before)} {String(it.remind_unit)}</p>
+                        <p className="text-[rgba(255,176,32,0.95)] text-sm">
+                          ⏰ {String(it.remind_before)} {String(it.remind_unit)}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -239,7 +242,12 @@ export default function NonRepeatingRemindersPage() {
                             throw new Error(err?.error || res.statusText);
                           }
                           await refetch();
-                          toast.update(toastId, { render: 'Reminder deleted successfully!', type: 'success', isLoading: false, autoClose: 3000 });
+                          toast.update(toastId, {
+                            render: 'Reminder deleted successfully!',
+                            type: 'success',
+                            isLoading: false,
+                            autoClose: 3000,
+                          });
                         } catch (e: unknown) {
                           const msg = e instanceof Error ? e.message : 'Failed to delete reminder';
                           toast.error(msg);
