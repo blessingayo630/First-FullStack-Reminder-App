@@ -1,11 +1,11 @@
-@import "tailwindcss";
+      @import "tailwindcss";
 
 * { 
   box-sizing: border-box;
 }
 
 :root {
-
+ 
   /* Alarm-Clock dark theme */
   --background: #070912;
   --foreground: #e9eefc;
@@ -432,10 +432,89 @@ input, button, select, textarea {
   background-color: var(--switch-thumb-checked) !important;
 }
 
-/* Ensure wrapper size doesn't look like a badge/pill */
-.alarm-switch {
+/* Ensure wrapper size doesn't look like a badge/pill and make the MUI Switch smaller */
+/* .alarm-switch {
   margin: 0;
+  width: 38px;
+  height: 22px;
+} */
+
+.alarm-switch {
+  width: 56px !important;
+  height: 32px !important;
+  padding: 0 !important;
 }
+
+/* MUI Switch internals (v5) */
+/* .alarm-switch .MuiSwitch-switchBase {
+  padding: 0;
+  margin: 2px;
+}
+
+.alarm-switch .MuiSwitch-switchBase.Mui-checked {
+
+} */
+
+.alarm-switch .MuiSwitch-switchBase {
+  padding: 3px !important;
+  transition: all 0.3s ease !important;
+}
+
+.alarm-switch .MuiSwitch-switchBase.Mui-checked {
+  transform: translateX(24px) !important;
+}
+
+.alarm-switch .MuiSwitch-thumb {
+  width: 26px !important;
+  height: 26px !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.35),
+    0 0 12px rgba(255,255,255,0.25);
+    
+}
+
+
+.alarm-switch .MuiSwitch-track {
+  border-radius: 999px !important;
+  opacity: 1 !important;
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+
+.alarm-switch .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
+  background: linear-gradient(
+    135deg,
+    rgba(255,176,32,0.9),
+    rgba(255,136,0,0.95)
+  ) !important;
+
+  box-shadow:
+    0 0 12px rgba(255,176,32,0.5),
+    0 0 24px rgba(255,176,32,0.25);
+}
+
+.alarm-switch .MuiSwitch-switchBase.Mui-checked .MuiSwitch-thumb {
+  background: #fff !important;
+}
+
+/* .alarm-switch .MuiSwitch-thumb {
+  width: 16px !important;
+  height: 16px !important;
+} */
+/* 
+.alarm-switch .MuiSwitch-track {
+  height: 22px !important;
+  border-radius: 999px;
+  opacity: 1 !important;
+}
+
+.alarm-switch .MuiSwitch-root {
+  min-width: 38px;
+} */
 
 
 

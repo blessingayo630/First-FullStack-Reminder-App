@@ -14,7 +14,7 @@ export type ReminderItem = {
 
 export type Reminder = {
   id: number;
-  title: string;
+  title: string;   
   user_email: string;
   phone_number?: string | null;
   is_enabled: boolean;
@@ -29,7 +29,7 @@ export type DescriptionItem = {
   dueDate: string;
   remindBefore: number;
   remindUnit: string;
-  repeatMode: RepeatMode;
+  repeatMode: RepeatMode;       
   customWeekdays: number[] | null;
 };
 

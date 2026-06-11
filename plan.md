@@ -7,7 +7,7 @@
 - `app/api/auth/confirm-email/route.ts` is present but commented out (POST implementation is commented).
 - There is currently a `app/page.tsx` that renders the login page (so `/` is login).
 - There is no `app/homepage/page.tsx` in the visible tree; the existing authenticated UI appears to be in `app/components/HomePage.tsx`.
-
+   
 ## Plan
 1. Update `app/api/auth/login/route.ts`
    - Remove the special-case for `'Email not confirmed'` so login succeeds (or at least doesn't hard-fail with that messaging).
