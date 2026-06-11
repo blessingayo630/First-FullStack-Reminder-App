@@ -8,7 +8,9 @@ export type ReminderItem = {
   is_enabled?: boolean;
   repeat_mode?: 'once' | 'daily' | 'mon_fri' | 'custom' | null;
   custom_weekdays?: string | null;
+  status?: 'awaiting' | 'current' | 'previous' | null;
 };
+    
 
 export type Reminder = {
   id: number;

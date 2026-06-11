@@ -155,7 +155,7 @@ export default function ReminderForm({
             <label className="block text-sm font-medium text-white/70 mb-3">Descriptions</label>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {formData.descriptions.map((desc, index) => (
-                <div key={index} className="rounded-lg border border-white/10 p-4">
+                <div key={index} className="rounded-lg border border-white/10 p-4 relative">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-white/70 mb-1">Description {index + 1}</label>
@@ -169,18 +169,6 @@ export default function ReminderForm({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {index === formData.descriptions.length - 1 && (
-                        <button
-                          type="button"
-                          aria-label="Add another description"
-                          title="Add description"
-                          onClick={addDescriptionField}
-                          className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
-                        >
-                          <span className="text-2xl leading-none">+</span>
-                        </button>
-                      )}
-
                       {index !== 0 && (
                         <button
                           type="button"
@@ -196,8 +184,12 @@ export default function ReminderForm({
                   </div>
 
                   <div className="space-y-3">
+
+
+
                     <div>
                       <label className="block text-sm font-medium text-white/70 mb-1">Due Date &amp; Time *</label>
+
                       <input
                         type="datetime-local"
                         required
@@ -245,6 +237,18 @@ export default function ReminderForm({
                 </div>
               ))}
 
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  aria-label="Add another description"
+                  title="Add description"
+                  onClick={addDescriptionField}
+                  className="-mt-2 mr-1 flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
+                >
+                  <span className="text-2xl leading-none">+</span>
+                </button>
+              </div>
+
               <div className="rounded-lg border border-white/10 p-4">
                 <label className="block text-sm font-medium text-white/70 mb-1">Phone Number (for SMS - optional)</label>
                 <input
@@ -256,6 +260,7 @@ export default function ReminderForm({
                 />
                 <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
               </div>
+
             </div>
 
             <div className="mt-2 sm:col-span-2 lg:col-span-2">

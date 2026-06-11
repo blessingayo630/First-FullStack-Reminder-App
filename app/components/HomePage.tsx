@@ -135,16 +135,26 @@ export default function HomePage() {
   const filteredReminders = useMemo(() => {
     const processed = reminders.map((r) => ({ ...r, reminder_items: r.reminder_items ?? [] }));
 
-    // Homepage should only show repeating reminders.
-    // Exclude reminders where ALL sub-reminders are repeat_mode === 'once'.
-    // (Keep reminders that have at least one sub-reminder that repeats.)
+    // Homepage: show repeating sub-reminders only.
+    // 1) Remove one-time sub-reminders (repeat_mode === 'once') after the user has received the email.
+    //    We treat "email received" as: sub-reminder's is_sent === true.
+    // 2) Keep repeating sub-reminders (repeat_mode !== 'once').
+    // 3) If a reminder would become empty after filtering, drop the reminder.
     return processed
-      .filter((r) => (r.reminder_items ?? []).length > 0)
-      .filter((r) => (r.reminder_items ?? []).some((it) => (it.repeat_mode ?? 'once') !== 'once'));
+      .map((r) => {
+        const items = (r.reminder_items ?? []).filter((it) => {
+          const repeatMode = it.repeat_mode ?? 'once';
+          // Keep repeating modes always.
+          if (repeatMode !== 'once') return true;
+          // For "once" items: keep only if NOT sent yet.
+          return !it.is_sent;
+        });
+        return { ...r, reminder_items: items };
+      })
+      .filter((r) => (r.reminder_items ?? []).length > 0);
   }, [reminders]);
 
   const refetch = useCallback(async () => {
-
     try {
       const response = await fetch('/api/reminders/getAll', { cache: 'no-store' });
       const data = await response.json();
@@ -558,31 +568,35 @@ export default function HomePage() {
   if (loading) return <Loading />;
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <div className="flex items-center justify-start flex-1 min-w-0">
-            <div className="text-white font-semibold text-lg sm:text-xl truncate">Reminder App</div>
-          </div>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#070912]/70 backdrop-blur px-4 py-3">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-start flex-1 min-w-0">
+              <div className="text-white font-semibold text-sm sm:text-base truncate">Reminder App</div>
+            </div>
 
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => (window.location.href = '/settings')}
-              className="alarm-btn alarm-btn--ghost cursor-pointer text-white px-3 py-2 rounded-lg transition sm:px-4"
-            >
-              Settings
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="alarm-btn alarm-btn--danger cursor-pointer text-white px-3 py-2 rounded-lg transition sm:px-4"
-            >
-              Logout
-            </button>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => (window.location.href = '/settings')}
+                className="alarm-btn alarm-btn--ghost cursor-pointer text-white text-sm px-2.5 py-1.5 rounded-lg transition"
+              >
+                Settings
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="alarm-btn alarm-btn--danger cursor-pointer text-white text-sm px-2.5 py-1.5 rounded-lg transition"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
+      </header>
 
+      <div className="max-w-4xl mx-auto px-4 pt-6">
         <div className="card-neon rounded-lg p-6 mb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -592,10 +606,10 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button
                 type="button"
-                className="alarm-btn alarm-btn--ghost cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
                 onClick={() => {
                   window.location.href = '/non-repeating-reminders';
                 }}
+                className="alarm-btn alarm-btn--ghost cursor-pointer text-white px-4 py-2 rounded-lg transition sm:px-6"
               >
                 🔕 One-Time Reminders
               </button>
@@ -665,8 +679,7 @@ export default function HomePage() {
                                   className="alarm-input"
                                   value={desc.text}
                                   onChange={(e) =>
-                                    updateDescriptionField(index, { text: e.target.value })
-                                  }
+                                    updateDescriptionField(index, { text: e.target.value })}
                                   placeholder={
                                     index === 0
                                       ? 'Additional details'
@@ -763,8 +776,7 @@ export default function HomePage() {
                           placeholder="e.g., +1234567890 or 0712345678"
                           value={formData.phoneNumber}
                           onChange={(e) =>
-                            setFormData((p) => ({ ...p, phoneNumber: e.target.value }))
-                          }
+                            setFormData((p) => ({ ...p, phoneNumber: e.target.value }))}
                         />
                         <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
                       </div>
@@ -854,8 +866,7 @@ export default function HomePage() {
                                   className="alarm-input"
                                   value={desc.text}
                                   onChange={(e) =>
-                                    updateDescriptionField(index, { text: e.target.value })
-                                  }
+                                    updateDescriptionField(index, { text: e.target.value })}
                                   placeholder={
                                     index === 0
                                       ? 'Additional details'
@@ -952,8 +963,7 @@ export default function HomePage() {
                           placeholder="e.g., +1234567890 or 0712345678"
                           value={formData.phoneNumber}
                           onChange={(e) =>
-                            setFormData((p) => ({ ...p, phoneNumber: e.target.value }))
-                          }
+                            setFormData((p) => ({ ...p, phoneNumber: e.target.value }))}
                         />
                         <p className="text-sm text-white/45 mt-2">Include country code for SMS notifications</p>
                       </div>

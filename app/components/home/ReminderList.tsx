@@ -1,10 +1,7 @@
-'use client';
+  'use client';
 
-import { useMemo } from 'react';
 import Switch from '@mui/material/Switch';
-import { toast } from 'react-toastify';
 import type { Reminder, ReminderItem } from './ReminderTypes';
-import ReminderItemCard from './ReminderItemCard';
 
 function calculateReminderTime(it: ReminderItem) {
   const due = new Date(it.due_date);
@@ -72,7 +69,7 @@ export default function ReminderList({
           <p className="text-sm mt-2">Click the &quot;Add Reminder&quot; button to create one</p>
         </div>
       ) : (
-        <div className="divide-y divide-white/10">
+        <div className="space-y-4 px-0">
           {reminders.map((reminder) => {
             const items = reminder.reminder_items ?? [];
             const withSort = items
@@ -86,13 +83,8 @@ export default function ReminderList({
                 return ad - bd;
               });
 
-            const sentIndices = withSort
-              .map((x, idx) => (x.it.is_sent ? idx : -1))
-              .filter((idx) => idx !== -1);
-            const currentIndex = sentIndices.length ? Math.max(...sentIndices) : -1;
-
             return (
-              <div key={reminder.id} className="p-6 alarm-list-item">
+              <div key={reminder.id} className="card-neon rounded-lg p-6 alarm-list-item">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
@@ -108,33 +100,75 @@ export default function ReminderList({
                           onChange={(e) => onToggleParent(reminder, e.target.checked)}
                           sx={{
                             '& .MuiSwitch-switchBase.Mui-checked': { color: '#ffb020' },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#ffb020' },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                              backgroundColor: '#ffb020',
+                            },
                             '& .MuiSwitch-track': { backgroundColor: 'rgba(255,176,32,0.35)' },
                           }}
                         />
                       </div>
                     </div>
 
-                    <div className="mt-3 space-y-3">
-                      {withSort.map(({ it }, idx) => {
-                        const statusKind =
-                          currentIndex === -1
-                            ? 'awaiting'
-                            : idx === currentIndex
-                              ? 'current'
-                              : idx < currentIndex && it.is_sent
-                                ? 'previous'
-                                : 'awaiting';
+                    <div className="mt-4 space-y-4 flex flex-col items-center">
+                      {withSort.map(({ it }) => {
+                        const timeText = `${String(it.remind_before ?? '')} ${String(it.remind_unit ?? '')}`.trim();
+
+                        const statusKind = (it.status as 'previous' | 'current' | 'awaiting' | undefined) ?? 'awaiting';
 
                         return (
-                          <ReminderItemCard
+                          <div
                             key={it.id}
-                            reminder={reminder}
-                            item={it}
-                            statusKind={statusKind}
-                            formatDate={formatDate}
-                            onToggleItem={(nextEnabled) => onToggleItem(reminder.id, it.id, nextEnabled)}
-                          />
+                            className={`border border-white/10 rounded-lg p-3 w-full max-w-[90%] ${
+                              statusKind === 'previous'
+                                ? 'alarm-reminder-previous'
+                                : statusKind === 'current'
+                                  ? 'alarm-reminder-current'
+                                  : 'alarm-reminder-awaiting'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {statusKind === 'previous' && (
+                                    <span className="alarm-status-badge alarm-status-badge--previous">✓ Previous</span>
+                                  )}
+                                  {statusKind === 'current' && (
+                                    <span className="alarm-status-badge alarm-status-badge--current">🔔 Current</span>
+                                  )}
+                                  {statusKind === 'awaiting' && (
+                                    <span className="alarm-status-badge alarm-status-badge--awaiting">⏳ Awaiting</span>
+                                  )}
+                                </div>
+
+                                <p
+                                  className="text-white/80 font-medium truncate"
+                                  title={it.description}
+                                >
+                                  {it.description || '—'}
+                                </p>
+                                <p className="text-white/60 text-sm">📅 {formatDate(it.due_date)}</p>
+                                <p className="text-[rgba(255,176,32,0.95)] text-sm">⏰ {timeText || '—'}</p>
+                              </div>
+
+                              <div className="shrink-0 mt-0.5">
+                                <Switch
+                                  checked={it.is_enabled !== false}
+                                  onChange={(e) =>
+                                    onToggleItem(reminder.id, it.id, e.target.checked)
+                                  }
+                                  sx={{
+                                    '& .MuiSwitch-switchBase.Mui-checked': { color: '#ffb020' },
+                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                      backgroundColor: '#ffb020',
+                                    },
+                                    '& .MuiSwitch-track': {
+                                      backgroundColor: 'rgba(255,176,32,0.35)',
+                                    },
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
