@@ -1,14 +1,16 @@
-         'use client';
-
+          'use client';
+ 
 import React from 'react';
 import Switch from '@mui/material/Switch';
-import clsx from 'clsx'; 
+import clsx from 'clsx';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useRouter } from 'next/navigation'; 
 
 type TabKey = 'notification_preference' | 'change_email';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = React.useState<TabKey>('notification_preference');
-
+const router = useRouter();
   const [emailEnabled, setEmailEnabled] = React.useState(true);
   const [newEmail, setNewEmail] = React.useState('');
   const [whatsappEnabled, setWhatsappEnabled] = React.useState(false);
@@ -55,11 +57,31 @@ const toggleWhatsapp = (checked: boolean) => {
     >
       <div className="w-full max-w-3xl">
         <div className="card-neon rounded-lg p-6">
+          <div className="flex justify-between item-align item-center">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">Settings</h1>
             <p className="text-white/60 mt-2 text-sm">
               Notification & account preferences.
             </p>
+          </div>
+
+          <div>
+            <button
+    type="button"
+    onClick={() => router.push('/homepage')}
+    className="
+      flex items-center gap-2
+      text-white/70
+      hover:text-amber-300
+      transition-colors
+      cursor-pointer
+    "
+  >
+        <ArrowBackIcon fontSize="small" />
+         <span>Back</span>
+     </button>
+          </div>
+
           </div>
 
           <div className="mb-6">
