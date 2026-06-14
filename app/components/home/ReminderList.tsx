@@ -148,6 +148,33 @@ export default function ReminderList({
                                 </p>
                                 <p className="text-white/60 text-sm">📅 {formatDate(it.due_date)}</p>
                                 <p className="text-[rgba(255,176,32,0.95)] text-sm">⏰ {timeText || '—'}</p>
+                                <p className="text-white/70 text-sm">
+                                  🔁 Repeat: {(() => {
+                                    const mode = it.repeat_mode ?? 'once';
+                                    if (mode === 'once') return 'Once';
+                                    if (mode === 'daily') return 'Daily';
+                                    if (mode === 'mon_fri') return 'Mon to Fri';
+                                    if (mode === 'custom') {
+                                      const csv = it.custom_weekdays ?? '';
+                                      const days = String(csv)
+                                        .split(',')
+                                        .map((x) => Number.parseInt(x, 10))
+                                        .filter((n) => !Number.isNaN(n));
+                                      const labels: Record<number, string> = {
+                                        1: 'Mon',
+                                        2: 'Tue',
+                                        3: 'Wed',
+                                        4: 'Thu',
+                                        5: 'Fri',
+                                        6: 'Sat',
+                                        7: 'Sun',
+                                      };
+                                      if (!days.length) return 'Custom';
+                                      return `Custom (${days.map((d) => labels[d] ?? String(d)).join(', ')})`;
+                                    }
+                                    return mode;
+                                  })()}
+                                </p>
                               </div>
 
                               <div className="shrink-0 mt-0.5">

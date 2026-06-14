@@ -53,13 +53,13 @@
 //             throw new Error('Invalid remind unit');
 //         }
 
-//         return {
+//         return {      
 //           title,
 //           description: it.text || '',
 //           due_date: dueDateObj.toISOString(),
 //           remind_before: remindBefore,
 //           remind_unit: remindUnit,
-//           reminder_time: reminderTime.toISOString(),
+//           reminder_time: reminderTime.toISOString(),       
 //           user_email: userEmail || 'temp@example.com',
 //           phone_number: phoneNumber || null,
 //           fcm_token: fcmToken || null,
@@ -224,6 +224,7 @@ export async function POST(req: Request) {
       repeat_mode: item.repeatMode ?? 'once',
       custom_weekdays: item.repeatMode === 'custom' ? item.customWeekdays ?? null : null,
       is_sent: false,
+      is_enabled: true,
     }));
 
     const { error: itemsError } = await supabase

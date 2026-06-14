@@ -1,13 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import Loading from './Loading';
+import PopupStatusToast from './PopupStatusToast';
+
 import RepeatDropdown from './RepeatDropdown';
+
 import { requestNotificationPermission } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import ReminderList from './home/ReminderList';
 import type { Reminder, ReminderItem } from './home/ReminderTypes';
+
+
 
 type RepeatMode = 'once' | 'daily' | 'mon_fri' | 'custom';
 
@@ -131,15 +137,31 @@ export default function HomePage() {
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [openMenuForId, setOpenMenuForId] = useState<number | null>(null);
+  const router = useRouter();
+
+  const [currentPath] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return window.location.pathname;
+  });
+
+
+  const [inlineToast, setInlineToast] = useState<{
+    variant: 'success' | 'error';
+    title: string;
+    message?: string;
+    durationMs: number;
+  } | null>(null);
+
+
+  useEffect(() => {
+    if (!inlineToast) return;
+    const t = window.setTimeout(() => setInlineToast(null), inlineToast.durationMs);
+    return () => window.clearTimeout(t);
+  }, [inlineToast]);
 
   const filteredReminders = useMemo(() => {
     const processed = reminders.map((r) => ({ ...r, reminder_items: r.reminder_items ?? [] }));
 
-    // Homepage: show repeating sub-reminders only.
-    // 1) Remove one-time sub-reminders (repeat_mode === 'once') after the user has received the email.
-    //    We treat "email received" as: sub-reminder's is_sent === true.
-    // 2) Keep repeating sub-reminders (repeat_mode !== 'once').
-    // 3) If a reminder would become empty after filtering, drop the reminder.
     return processed
       .map((r) => {
         const items = (r.reminder_items ?? []).filter((it) => {
@@ -182,10 +204,24 @@ export default function HomePage() {
 
         const session = data?.session;
         if (!session) {
-          window.location.href = '/login';
+          // Don't interrupt in-app navigation to success/error routes.
+          const currentPath = window.location.pathname;
+          const currentUrl = window.location.href;
+          const isSuccessOrError =
+            currentPath.startsWith('/success') ||
+            currentPath.startsWith('/error') ||
+            currentUrl.includes('/success?') ||
+            currentUrl.includes('/error?');
+
+          if (!isSuccessOrError) {
+            window.location.href = '/login';
+          }
         }
       } catch {
-        window.location.href = '/login';
+        // Avoid clobbering a redirect that was already triggered.
+        if (!window.location.href.includes('/success?') && !window.location.href.includes('/error?')) {
+          window.location.href = '/login';
+        }
       }
     };
 
@@ -195,6 +231,7 @@ export default function HomePage() {
       cancelled = true;
     };
   }, []);
+
 
   useEffect(() => {
     const loadReminders = async () => {
@@ -340,6 +377,7 @@ export default function HomePage() {
     e.preventDefault();
 
     try {
+
       const items = formData.descriptions
         .map((d) => {
           const date = new Date(d.dueDate);
@@ -381,14 +419,40 @@ export default function HomePage() {
         }),
       });
 
-      if (!response.ok) return;
+      if (!response.ok) {
+        let message = 'Failed to create reminder';
+        try {
+          message = await response.text();
+        } catch {
+          // ignore
+        }
+        setInlineToast({ variant: 'error', title: 'Something went wrong', message, durationMs: 4500 });
+        return;
+      }
 
       resetForm();
       setShowForm(false);
-      refetch();
+
+      await refetch();
+
+      // Popup after modal closes (no redirect)
+      setInlineToast({
+        variant: 'success',
+        title: 'Success',
+        message: 'Your reminder was created successfully.',
+        durationMs: 3500,
+      });
+
     } catch (error) {
       console.error('Error adding reminder:', error);
+      setInlineToast({
+        variant: 'error',
+        title: 'Something went wrong',
+        message: 'Failed to create reminder',
+        durationMs: 4500,
+      });
     }
+
   };
 
   const handleEditClick = async (reminder: Reminder) => {
@@ -457,6 +521,7 @@ export default function HomePage() {
     if (!editingReminder) return;
 
     try {
+
       const firstDueDate = formData.descriptions[0]?.dueDate;
       const date = new Date(firstDueDate);
       if (isNaN(date.getTime())) return;
@@ -514,12 +579,36 @@ export default function HomePage() {
         }),
       });
 
-      if (!response.ok) return;
+      if (!response.ok) {
+        let message = 'Failed to update reminder';
+        try {
+          message = await response.text();
+        } catch {
+          // ignore
+        }
+        setInlineToast({
+          variant: 'error',
+          title: 'Something went wrong',
+          message,
+          durationMs: 4500,
+        });
+        return;
+      }
+
 
       resetForm();
       setEditingReminder(null);
       setShowEditForm(false);
-      refetch();
+      await refetch();
+
+      // Popup after modal closes (no redirect)
+      setInlineToast({
+        variant: 'success',
+        title: 'Success',
+        message: 'Your reminder was updated successfully.',
+        durationMs: 3500,
+      });
+
     } catch (error) {
       console.error('Error updating reminder:', error);
     }
@@ -569,7 +658,46 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#070912]/70 backdrop-blur px-4 py-3">
+      {inlineToast ? (
+        <PopupStatusToast
+          variant={inlineToast.variant}
+          title={inlineToast.title}
+          message={inlineToast.message}
+          durationMs={inlineToast.durationMs}
+          onClose={() => setInlineToast(null)}
+        />
+      ) : null}
+
+
+      {(currentPath === '/404' || currentPath === '/not-found') && (
+        <div className="absolute inset-0 z-[60] bg-[#070912]/50 flex items-center justify-center p-6">
+          <div className="card-neon rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-semibold text-white">404 - Page not found</h2>
+            <p className="text-white/60 mt-2">
+              The page you’re looking for doesn’t exist or the link is broken.
+            </p>
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => (window.location.href = '/')}
+                className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition"
+              >
+                Go Home
+              </button>
+              <button
+                type="button"
+                onClick={() => (window.location.href = '/login')}
+                className="alarm-btn alarm-btn--ghost cursor-pointer text-white px-4 py-2 rounded-lg transition"
+              >
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#070912]/70 backdrop-blur shadow-[0_8px_30px_rgba(0,0,0,0.45)] px-4 py-3">
+
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center justify-start flex-1 min-w-0">
@@ -666,7 +794,35 @@ export default function HomePage() {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-white/70 mb-3">Label (add multiple labels)</label>
+                      {/* <div className="flex items-center justify-between gap-3 mb-3">
+                        <label className="block text-sm font-medium text-white/70">Label (add multiple labels)</label>
+
+                        <button
+                          type="button"
+                          aria-label="Add another description"
+                          title="Add description"
+                          onClick={addDescriptionField}
+                          className="flex-shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
+                        >
+                          <span className="text-2xl leading-none">+</span>
+                        </button>
+                      </div> */}
+
+                      <div className="flex items-center gap-3 mb-3">
+  <button
+    type="button"
+    aria-label="Add another description"
+    title="Add description"
+    onClick={addDescriptionField}
+    className="flex-shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
+  >
+    <span className="text-2xl leading-none">+</span>
+  </button>
+
+  <label className="block text-sm font-medium text-white/70">
+    Label (edit multiple labels)
+  </label>
+</div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {formData.descriptions.map((desc, index) => (
@@ -689,7 +845,7 @@ export default function HomePage() {
                               </div>
 
                               <div className="flex items-center gap-2">
-                                {index === formData.descriptions.length - 1 && (
+                                {/* {index === formData.descriptions.length - 1 && (
                                   <button
                                     type="button"
                                     aria-label="Add another description"
@@ -699,7 +855,7 @@ export default function HomePage() {
                                   >
                                     <span className="text-2xl leading-none">+</span>
                                   </button>
-                                )}
+                                )} */}
 
                                 {index !== 0 && (
                                   <button
@@ -728,7 +884,7 @@ export default function HomePage() {
                               </div>
 
                               <div>
-                                <label className="block text-sm font-medium text-white/70 mb-1">Remind Me *</label>
+                                <label className="block text-sm font-medium text-white/70 mb-1">Remind Me * </label>
                                 <div className="flex gap-2 items-stretch mb-4">
                                   <input
                                     type="number"
@@ -750,6 +906,8 @@ export default function HomePage() {
                                   />
                                 </div>
 
+                                <div>
+                                <label className="block text-sm font-medium text-white/70 mb-1">Repeat *</label>
                                 <RepeatDropdown
                                   value={desc.repeatMode}
                                   customWeekdays={
@@ -762,6 +920,8 @@ export default function HomePage() {
                                     });
                                   }}
                                 />
+                                </div>
+                                
                               </div>
                             </div>
                           </div>
@@ -853,7 +1013,18 @@ export default function HomePage() {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-white/70 mb-3">Label (edit multiple labels)</label>
+                      <div className="flex items-center justify-start gap-3 mb-3">
+                        <button
+    type="button"
+    aria-label="Add another description"
+    title="Add description"
+    onClick={addDescriptionField}
+    className="flex-shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
+  >
+    <span className="text-2xl leading-none">+</span>
+  </button>
+                        <label className="block text-sm font-medium text-white/70">Label (edit multiple labels)</label>
+                      </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {formData.descriptions.map((desc, index) => (
@@ -876,17 +1047,7 @@ export default function HomePage() {
                               </div>
 
                               <div className="flex items-center gap-2">
-                                {index === formData.descriptions.length - 1 && (
-                                  <button
-                                    type="button"
-                                    aria-label="Add another description"
-                                    title="Add description"
-                                    onClick={addDescriptionField}
-                                    className="flex-shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-lg alarm-btn alarm-btn--ghost text-white hover:scale-105 transition"
-                                  >
-                                    <span className="text-2xl leading-none">+</span>
-                                  </button>
-                                )}
+                               
 
                                 {index !== 0 && (
                                   <button
@@ -937,7 +1098,9 @@ export default function HomePage() {
                                   />
                                 </div>
 
-                                <RepeatDropdown
+                                <div>
+                                <label className="block text-sm font-medium text-white/70 mb-1">Repeat *</label>
+                                 <RepeatDropdown
                                   value={desc.repeatMode}
                                   customWeekdays={
                                     desc.repeatMode === 'custom' ? desc.customWeekdays ?? undefined : undefined
@@ -949,6 +1112,8 @@ export default function HomePage() {
                                     });
                                   }}
                                 />
+                                </div>
+                               
                               </div>
                             </div>
                           </div>

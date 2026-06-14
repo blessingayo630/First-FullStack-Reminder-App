@@ -75,16 +75,18 @@
 
 /* Shared UI helpers */
 .card-neon {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.045));
+  /* Make neon card backgrounds fully opaque (no translucency / blur through) */
+  background: rgba(7, 9, 18, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0.75rem;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.08),
     0 10px 40px rgba(0, 0, 0, 0.45),
     0 0 28px rgba(255, 176, 32, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
+
 
 .alarm-surface {
   background: transparent;

@@ -1,400 +1,7 @@
-
-// // // ✅ ADD THIS AS THE VERY FIRST LINE - Force timezone to Africa/Lagos
-// // process.env.TZ = 'Africa/Lagos';
-  
-// // // app/api/cron/route.ts
-// // import { NextResponse } from 'next/server';
-// // import { Resend } from 'resend';
-// // import { supabaseService } from '@/lib/supabase';
-// // import { sendSMSReminder } from '@/lib/sms';
-
-// // // **** THE FIX: Force the Node.js Runtime ****
-// // export const runtime = 'nodejs';
-// // export const dynamic = 'force-dynamic';
-
-// // const supabase = supabaseService;
-// // const resend = new Resend(process.env.RESEND_API_KEY);
-// // if (!process.env.RESEND_API_KEY) {
-// //   console.error('❌ RESEND_API_KEY is missing!');
-// // }
-    
-
-// // export async function GET(request: Request) {
-// //   try {
-// //     console.log('🕐 Cron job: Checking for due reminders...');
-
-// //     // Use ISO string for consistent comparison with stored dates
-// //     const nowISO = new Date().toISOString();
-
-// //     const { data: reminders, error } = await supabase
-// //       .from('reminders')
-// //       .select('*')
-// //       .lte('reminder_time', nowISO)
-// //       .eq('is_sent', false);
-
-// //     if (error) {
-// //       console.error('Supabase query error:', error);
-// //       throw error;
-// //     }
-
-// //     let sent = 0;
-// //     for (const reminder of reminders || []) {
-// //       console.log(`📧 Attempting to send notifications for reminder ${reminder.id}`);
-      
-// //       let emailSent = false;
-// //       let smsSent = false;
-
-// //       // 1. Send email using Resend
-// //       try {
-// //         const { data, error: emailError } = await resend.emails.send({
-// //           from: 'Reminder App <onboarding@resend.dev>',
-// //           to: [reminder.user_email],
-// //           subject: `🔔 REMINDER: ${reminder.title}`,
-// //           html: `
-// //             <!DOCTYPE html>
-// //             <html>
-// //             <head>
-// //               <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-// //               <style>
-// //                 body { font-family: 'Montserrat', sans-serif; background-color: #070912; color: #e9eefc; margin: 0; padding: 0; }
-// //                 .container { max-width: 600px; margin: 20px auto; padding: 30px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.045)); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; box-shadow: 0 0 28px rgba(255, 176, 32, 0.12); }
-// //                 h2 { color: #ffb020; font-weight: 700; font-size: 24px; margin-top: 0; }
-// //                 .content { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px; border: 1px solid rgba(255, 176, 32, 0.2); margin: 20px 0; }
-// //                 .title { font-size: 20px; font-weight: 600; color: #ffffff; margin-bottom: 10px; }
-// //                 .desc { color: rgba(233, 238, 252, 0.7); margin-bottom: 20px; line-height: 1.6; }
-// //                 .footer { color: rgba(233, 238, 252, 0.4); font-size: 12px; text-align: center; margin-top: 30px; }
-// //                 .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-// //                 .badge-due { background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; }
-// //                 .badge-remind { background: rgba(255, 176, 32, 0.12); border: 1px solid rgba(255, 176, 32, 0.3); color: #ffb020; margin-left: 10px; }
-// //               </style>
-// //             </head>
-// //             <body>
-// //               <div class="container">
-// //                 <h2>⏰ Reminder Alert</h2>
-                
-// //                 <div class="content">
-// //                   <div class="title">${reminder.title}</div>
-// //                   ${reminder.description ? `<div class="desc">${reminder.description}</div>` : ''}
-                  
-// //                   <div style="margin-top: 20px;">
-// //                     <span class="badge badge-due">📅 Due (Lagos): ${new Date(reminder.due_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' })}</span>
-// //                     <span class="badge badge-remind">⏰ ${reminder.remind_before} ${reminder.remind_unit} before</span>
-// //                   </div>
-// //                 </div>
-
-// //                 <div class="footer">
-// //                   This is an automated reminder from your Reminder App.<br>
-// //                   © 2026 Reminder App. All rights reserved.
-// //                 </div>
-// //               </div>
-// //             </body>
-// //             </html>
-// //           `,
-// //         });
-        
-// //         if (!emailError) {
-// //           emailSent = true;
-// //           console.log(`✅ Email sent for reminder ${reminder.id}`);
-// //         } else {
-// //           console.error(`❌ Resend Error for reminder ${reminder.id}:`, JSON.stringify(emailError));
-// //         }
-// //       } catch (err) {
-// //         console.error(`❌ Email throw error for ${reminder.id}:`, err);
-// //       }
-
-// //       // 2. Send SMS if phone number exists
-// //       if (reminder.phone_number) {
-// //         try {
-// //           console.log(`📱 Attempting to send SMS to ${reminder.phone_number}`);
-// //           const smsResult = await sendSMSReminder(reminder, reminder.phone_number);
-// //           if (smsResult) {
-// //             smsSent = true;
-// //             console.log(`✅ SMS sent for reminder ${reminder.id}`);
-// //           }
-// //         } catch (err) {
-// //           console.error(`❌ SMS throw error for ${reminder.id}:`, err);
-// //         }
-// //       } else {
-// //         smsSent = true; // Mark as "sent" if no phone provided, so we can mark the reminder as processed
-// //       }
-
-// //       // Mark as sent if at least one succeeded (or no phone needed)
-// //       if (emailSent || (reminder.phone_number && smsSent)) {
-// //         const { error: updateError } = await supabase
-// //           .from('reminders')
-// //           .update({ is_sent: true })
-// //           .eq('id', reminder.id);
-        
-// //         if (updateError) {
-// //           console.error(`❌ Failed to update is_sent for reminder ${reminder.id}:`, updateError);
-// //         } else {
-// //           sent++;
-// //           console.log(`✅ Reminder ${reminder.id} marked as fully processed`);
-// //         }
-// //       }
-// //     }
-
-// //     return NextResponse.json({
-// //       message: `Processed ${reminders?.length || 0} reminders, sent ${sent} emails`,
-// //       timestamp: new Date().toISOString(),
-// //     });
-// //   } catch (error) {
-// //     console.error('Cron job error:', error);
-// //     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-// //   }
-// // }
-
-// // ✅ FORCE LAGOS TIMEZONE
-// process.env.TZ = 'Africa/Lagos';
-
-// // app/api/cron/route.ts
-
-// import { NextResponse } from 'next/server';
-// import { Resend } from 'resend';
-// import { supabaseService } from '@/lib/supabase';
-// import { sendSMSReminder, sendSMSAfricaTalking } from '@/lib/sms';
-// import { sendReminderEmail } from '@/lib/email';
-// import admin from 'firebase-admin';
-
-
-// // ✅ FORCE NODE RUNTIME
-// export const runtime = 'nodejs';
-// export const dynamic = 'force-dynamic';
-
-// const supabase = supabaseService;
-
-// const resend = new Resend(process.env.RESEND_API_KEY);
-
-// if (!process.env.RESEND_API_KEY) {
-//   console.error('❌ RESEND_API_KEY is missing!');
-// }
-
-// // Initialize Firebase Admin SDK
-// if (!admin.apps.length) {
-//   try {
-//     admin.initializeApp({
-//       credential: admin.credential.cert({
-//         projectId: process.env.FIREBASE_PROJECT_ID,
-//         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-//         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-//       }),
-//     });
-//     console.log('✅ Firebase Admin SDK initialized');
-//   } catch (error) {
-//     console.error('❌ Firebase Admin initialization error:', error);
-//   }
-// }
-
-// export async function GET(request: Request) {
-//   try {
-//     console.log('🕐 Cron job started...');
-
-//     const nowISO = new Date().toISOString();
-
-//     // =========================
-//     // FETCH REMINDERS
-//     // =========================
-//     // const { data: reminders, error } = await supabase
-//     //   .from('reminders')
-//     //   .select('*')
-//     //   .lte('reminder_time', nowISO)
-//     //   .eq('is_sent', false)
-//     //   .eq('is_enabled', true);
-
-
-// const { data: items, error } = await supabase
-//   .from('reminder_items')
-//   .select(`
-//     *,
-//     reminders (
-//       id,
-//       title,
-//       user_email,
-//       phone_number,
-//       is_enabled
-//     )
-//   `)
-//   .eq('is_sent', false);
-
-//     if (error) {
-//       console.error('❌ Supabase query error:', error);
-//       throw error;
-//     }
-
-//     let sent = 0;
-
-//     // =========================
-//     // LOOP REMINDERS
-//     // =========================
-//     // for (const reminder of reminders || []) {
-//    for (const item of items || []) {
-//       console.log(
-//         `🔔 Processing reminder ${item.id}`
-//       );
-
-//       let emailSent = false;
-//       let smsSent = false;
-//       let pushSent = false;
-
-//       // =========================
-//       // 0. OPTIMISTIC LOCK: Mark as sent BEFORE sending to prevent race conditions
-//       // This prevents duplicate sends if cron runs multiple times
-//       // =========================
-//       const { data: lockData, error: lockError } = await supabase
-//         .from('reminders')
-//         .update({ is_sent: true })
-//         .eq('id', item.id)
-//         .eq('is_sent', false)
-//         .select()
-//         .single();
-
-//       if (lockError || !lockData) {
-//         console.log(`⏭️ Reminder ${item.id} already being processed, skipping`);
-//         continue;
-//       }
-
-//       // =========================
-//       // 1. SEND EMAIL (use shared template)
-//       // =========================
-//       try {
-//         emailSent = await sendReminderEmail(reminder);
-
-//         if (emailSent) {
-//           console.log(`✅ Email sent for reminder ${reminder.id}`);
-//         } else {
-//           console.error(`❌ Email failed for reminder ${reminder.id}`);
-//           // Revert the lock since email failed
-//           await supabase
-//             .from('reminders')
-//             .update({ is_sent: false })
-//             .eq('id', reminder.id);
-//         }
-//       } catch (err) {
-//         console.error(`❌ Email throw error for ${reminder.id}`, err);
-//         // Revert the lock since email failed
-//         await supabase
-//           .from('reminders')
-//           .update({ is_sent: false })
-//           .eq('id', reminder.id);
-//       }
-
-
-//       // =========================
-//       // 2. SEND SMS
-//       // =========================
-//       if (reminder.phone_number) {
-//         try {
-//           console.log(
-//             `📱 Sending SMS to ${reminder.phone_number}`
-//           );
-
-//           // Try Africa's Talking first (free tier available), fallback to Twilio
-//           let smsResult = false;
-
-//           if (process.env.AFRICAS_TALKING_API_KEY) {
-//             smsResult = await sendSMSAfricaTalking(
-//               reminder,
-//               reminder.phone_number
-//             );
-//           } else {
-//             // Fallback to Twilio if Africa's Talking not configured
-//             smsResult = await sendSMSReminder(
-//               reminder,
-//               reminder.phone_number
-//             );
-//           }
-
-//           if (smsResult) {
-//             smsSent = true;
-
-//             console.log(
-//               `✅ SMS sent for reminder ${reminder.id}`
-//             );
-//           }
-//         } catch (err) {
-//           console.error(
-//             `❌ SMS error for ${reminder.id}`,
-//             err
-//           );
-//         }
-//       } else {
-//         smsSent = true;
-//       }
-
-//       // =========================
-//       // 3. SEND PUSH NOTIFICATION (using Firebase Admin SDK - HTTP v1 API)
-//       // =========================
-//       if (reminder.fcm_token) {
-//         try {
-//           console.log(`📲 Sending push notification...`);
-
-//           const message = {
-//             notification: {
-//               title: `🔔 ${reminder.title}`,
-//               body: reminder.description || 'Reminder Alert',
-//             },
-//             token: reminder.fcm_token,
-//             webpush: {
-//               fcmOptions: {
-//                 link: process.env.NEXT_PUBLIC_APP_URL,
-//               },
-//             },
-//           };
-
-//           const result = await admin.messaging().send(message);
-
-//           console.log(`✅ Push notification sent: ${result}`);
-//           pushSent = true;
-//         } catch (err: unknown) {
-//           const errorMessage = err instanceof Error ? err.message : String(err);
-//           console.error(`❌ Push notification error for ${reminder.id}:`, errorMessage);
-//           // Don't treat as fatal - continue processing
-//         }
-//       }
-
-//       // =========================
-//       // 4. TRACK SUCCESS
-//       // =========================
-//       if (emailSent || smsSent || pushSent) {
-//         sent++;
-//         console.log(`✅ Reminder ${reminder.id} fully processed`);
-//       }
-//     }
-
-//     // =========================
-//     // FINAL RESPONSE
-//     // =========================
-//     return NextResponse.json({
-//       success: true,
-
-//       message: `Processed ${
-//         reminders?.length || 0
-//       } reminders`,
-
-//       sent,
-
-//       timestamp: new Date().toISOString(),
-//     });
-//   } catch (error) {
-//     console.error('❌ Cron job error:', error);
-
-//     return NextResponse.json(
-//       {
-//         error: 'Internal server error',
-//       },
-//       {
-//         status: 500,
-//       }
-//     );
-//   }
-// }
-
-
-// ✅ FORCE LAGOS TIMEZONE
 process.env.TZ = 'Africa/Lagos';
 
 import { NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase';
+import { supabaseService as supabaseService } from '@/lib/supabase';
 import { sendSMSReminder, sendSMSAfricaTalking } from '@/lib/sms';
 import { sendReminderEmail } from '@/lib/email';
 import admin from 'firebase-admin';
@@ -431,43 +38,78 @@ function computeNextDueDate({
 }): string | null {
   if (!repeatMode || repeatMode === 'once') return null;
 
+  // Scheduling must not drift across day boundaries.
+  // We interpret `dueDateISO` in Africa/Lagos local time, compute the next
+  // occurrence date (and keep the same time-of-day), then return ISO.
   const due = new Date(dueDateISO);
-  // Use local time (Node honors process.env.TZ='Africa/Lagos')
-  const start = new Date(due.getTime());
+  if (Number.isNaN(due.getTime())) return null;
 
-  // JS: 0=Sun ... 6=Sat
-  const isMatchCustom = (day: number) => {
-    // UI uses 1=Mon..7=Sun
-    // Convert to UI mapping: 1 Mon => JS day 1
-    // JS day 0 (Sun) => UI 7
-    const ui = day === 0 ? 7 : day;
-    return (customWeekdays ?? []).includes(ui);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Lagos',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(due);
+
+  const get = (type: string) => parts.find((p) => p.type === type)?.value;
+
+  const year = Number(get('year'));
+  const month = Number(get('month'));
+  const day = Number(get('day'));
+  const hour = Number(get('hour'));
+  const minute = Number(get('minute'));
+  const second = Number(get('second'));
+
+  if ([year, month, day, hour, minute, second].some((v) => Number.isNaN(v))) return null;
+
+  // Create a UTC timestamp representing the same wall-clock time in Lagos.
+  const start = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+
+  // UI uses 1=Mon..7=Sun
+  const isMatchCustomUI = (uiDay: number) => (customWeekdays ?? []).includes(uiDay);
+
+  const getLagosUIWeekday = (candidateUTC: Date): number | null => {
+    const lagosParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Africa/Lagos',
+      weekday: 'short',
+    }).formatToParts(candidateUTC);
+
+    const weekdayShort = lagosParts.find((p) => p.type === 'weekday')?.value;
+    const mapShortToUI: Record<string, number> = {
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+      Sun: 7,
+    };
+
+    return weekdayShort ? mapShortToUI[weekdayShort] ?? null : null;
   };
 
-  if (repeatMode === 'daily') {
-    const next = new Date(start);
-    next.setDate(next.getDate() + 1);
-    return next.toISOString();
-  }
+  const shouldTake = (candidateUTC: Date) => {
+    const ui = getLagosUIWeekday(candidateUTC);
+    if (!ui) return false;
 
-  const isWeekdayMonFri = (day: number) => day >= 1 && day <= 5; // Mon=1..Fri=5
-
-  const shouldTake = (day: number) => {
-    if (repeatMode === 'mon_fri') return isWeekdayMonFri(day);
-    if (repeatMode === 'custom') return isMatchCustom(day);
+    if (repeatMode === 'daily') return true;
+    if (repeatMode === 'mon_fri') return ui >= 1 && ui <= 5;
+    if (repeatMode === 'custom') return isMatchCustomUI(ui);
     return false;
   };
 
-  // Find next matching day, starting from +1 day (so we don't re-send same occurrence)
+  // Find next matching day starting from +1 day
   for (let i = 1; i <= 3660; i++) {
     const next = new Date(start);
-    next.setDate(next.getDate() + i);
-    if (shouldTake(next.getDay())) {
-      return next.toISOString();
-    }
+    next.setUTCDate(next.getUTCDate() + i);
+
+    if (shouldTake(next)) return next.toISOString();
   }
 
-  // Safety fallback
   return null;
 }
 
@@ -477,8 +119,6 @@ export async function GET() {
 
     const now = new Date();
 
-
-    // FETCH ITEMS (only enabled items + enabled parent)
     const { data: items, error } = await supabase
       .from('reminder_items')
       .select(`
@@ -492,9 +132,8 @@ export async function GET() {
           fcm_token
         )
       `)
-.eq('is_sent', false)
-      .eq('is_enabled', true);
-
+      .eq('is_sent', false)
+      .or('is_enabled.eq.true,is_enabled.is.null');
 
     if (error) {
       console.error('❌ Supabase query error:', error);
@@ -513,60 +152,43 @@ export async function GET() {
         continue;
       }
 
-      // If parent reminder is disabled, skip this item
       if (!reminder.is_enabled) {
         console.log(`⏭️ Parent reminder disabled for item ${item.id}`);
         continue;
       }
 
-
-      // =========================
-      // ⏰ CALCULATE REMINDER TIME
-      // =========================
-      // Debug repeating metadata + due dates
-      console.log('🧾 Cron item debug', {
-        item_id: item.id,
-        parent_id: reminder?.id,
-        due_date_stored: item.due_date,
-        remind_before: item.remind_before,
-        remind_unit: item.remind_unit,
-        repeat_mode_on_item: (item as { repeat_mode?: unknown }).repeat_mode,
-        custom_weekdays_on_item: (item as { custom_weekdays?: unknown }).custom_weekdays,
-
-        now_iso: now.toISOString(),
-      });
-
       const dueDate = new Date(item.due_date);
-      const  reminderTime = new Date(dueDate);
+      const reminderTime = new Date(dueDate);
 
-
+      // Compute reminderTime = due_date - remind_before*(unit)
+      // (Keep this consistent with how you already fire reminders today.)
       switch (item.remind_unit) {
         case 'minutes':
-          reminderTime.setMinutes(reminderTime.getMinutes() - item.remind_before);
+          reminderTime.setUTCMinutes(reminderTime.getUTCMinutes() - (item.remind_before ?? 0));
           break;
-
         case 'hours':
-          reminderTime.setHours(reminderTime.getHours() - item.remind_before);
+          reminderTime.setUTCHours(reminderTime.getUTCHours() - (item.remind_before ?? 0));
           break;
-
         case 'days':
-          reminderTime.setDate(reminderTime.getDate() - item.remind_before);
+          reminderTime.setUTCDate(reminderTime.getUTCDate() - (item.remind_before ?? 0));
+          break;
+        default:
           break;
       }
 
-      // SKIP IF NOT TIME YET
-      if (now < reminderTime) {
-        console.log(`⏭️ Not time yet for item ${item.id}`);
+      if (now.getTime() < reminderTime.getTime()) {
+        console.log('⏭️ Not time yet (debug)', {
+          item_id: item.id,
+          due_date_raw: item.due_date,
+          reminderTime_utc: isNaN(reminderTime.getTime()) ? null : reminderTime.toISOString(),
+          now_utc: now.toISOString(),
+          remind_before: item.remind_before,
+          remind_unit: item.remind_unit,
+        });
         continue;
       }
 
-      let emailSent = false;
-      let smsSent = false;
-      let pushSent = false;
-
-      // =========================
-      // LOCK (PREVENT DUPLICATES)
-      // =========================
+      // LOCK to prevent duplicates
       const { data: lockData } = await supabase
         .from('reminder_items')
         .update({ is_sent: true })
@@ -580,10 +202,11 @@ export async function GET() {
         continue;
       }
 
+      let emailSent = false;
+      let smsSent = false;
+      let pushSent = false;
 
-      // =========================
       // EMAIL
-      // =========================
       try {
         emailSent = await sendReminderEmail({
           id: reminder.id,
@@ -596,25 +219,14 @@ export async function GET() {
         });
 
         if (!emailSent) {
-          await supabase
-            .from('reminder_items')
-            .update({ is_sent: false })
-            .eq('id', item.id);
+          await supabase.from('reminder_items').update({ is_sent: false }).eq('id', item.id);
         }
-
-
       } catch (err) {
         console.error(`❌ Email error item ${item.id}`, err);
-
-        await supabase
-          .from('reminder_items')
-          .update({ is_sent: false })
-          .eq('id', item.id);
+        await supabase.from('reminder_items').update({ is_sent: false }).eq('id', item.id);
       }
 
-      // =========================
-      // SMS
-      // =========================
+      // SMS (optional)
       if (reminder.phone_number) {
         try {
           let smsResult = false;
@@ -633,12 +245,10 @@ export async function GET() {
         smsSent = true;
       }
 
-      // =========================
-      // PUSH NOTIFICATION
-      // =========================
+      // PUSH (your note says you don't use it, but keep the existing behavior)
       if (reminder.fcm_token) {
         try {
-          const message = {
+          await admin.messaging().send({
             notification: {
               title: `🔔 ${reminder.title}`,
               body: reminder.description || 'Reminder Alert',
@@ -649,20 +259,15 @@ export async function GET() {
                 link: process.env.NEXT_PUBLIC_APP_URL,
               },
             },
-          };
-
-          await admin.messaging().send(message);
+          });
           pushSent = true;
         } catch (err) {
           console.error(`❌ Push error item ${item.id}`, err);
         }
       }
 
-      // =========================
-      // TRACK SUCCESS + RESCHEDULE (for repeating reminders)
-      // =========================
       if (emailSent || smsSent || pushSent) {
-        // Mark occurrence as processed, but if it's repeating, schedule the next one
+        // Reschedule repeating reminders
         if (item.repeat_mode && item.repeat_mode !== 'once') {
           const nextDueDateISO = computeNextDueDate({
             dueDateISO: item.due_date,
@@ -673,38 +278,19 @@ export async function GET() {
           if (nextDueDateISO) {
             await supabase
               .from('reminder_items')
-              .update({
-                due_date: nextDueDateISO,
-                is_sent: false,
-              })
+              .update({ due_date: nextDueDateISO, is_sent: false })
               .eq('id', item.id);
 
-            console.log(`🔁 Rescheduled item ${item.id} to ${nextDueDateISO}`);
+            console.log(`🔁 Rescheduled item ${item.id} from ${item.due_date} -> ${nextDueDateISO}`);
           } else {
-            // If we can't compute next, fall back to one-shot behavior
-            await supabase
-              .from('reminder_items')
-              .update({ is_sent: true })
-              .eq('id', item.id);
-
-            console.log(`✅ Item ${item.id} marked as sent (no next due date computed)`);
+            await supabase.from('reminder_items').update({ is_sent: true }).eq('id', item.id);
           }
-        } else {
-          // One-time: keep it sent (already locked as is_sent=true)
-          console.log(`✅ Item ${item.id} processed successfully`);
         }
 
         sent++;
       } else {
-        // Sending failed for this occurrence; allow retry on next cron
-        await supabase
-          .from('reminder_items')
-          .update({ is_sent: false })
-          .eq('id', item.id);
-
-        console.log(`❌ Item ${item.id} failed to send; leaving is_sent=false for retry`);
+        await supabase.from('reminder_items').update({ is_sent: false }).eq('id', item.id);
       }
-
     }
 
     return NextResponse.json({
@@ -713,13 +299,10 @@ export async function GET() {
       sent,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error('❌ Cron job error:', error);
 
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

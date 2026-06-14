@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'react-toastify';
+
+
 import RepeatDropdown from '../RepeatDropdown';
 import type { DescriptionItem, RepeatMode } from './ReminderTypes';
 import CustomDropdown from './CustomDropdown';
@@ -53,9 +54,11 @@ export default function ReminderForm({
       const last = prev.descriptions[prev.descriptions.length - 1];
       const isIncomplete = !last.text.trim() || !last.dueDate || !last.remindBefore || !last.remindUnit;
       if (isIncomplete) {
-        toast.warn('Please complete Description, Due Date and Remind Me first');
+        // Keep user inside modal; show no redirect here.
+        // Parent can show a popup if desired.
         return prev;
       }
+
 
       return {
         ...prev,
@@ -112,9 +115,15 @@ export default function ReminderForm({
             }>;
 
           if (items.length === 0 || items.every((i) => !i.text || !String(i.text).trim())) {
-            toast.error('Please add at least one description');
             return;
           }
+
+          // Make the first (default) Description repeat selection required.
+          const first = formData.descriptions[0];
+          if (!first?.repeatMode) {
+            return;
+          }
+
 
           await onSubmit({
             title: formData.title,
@@ -223,7 +232,7 @@ export default function ReminderForm({
                       </div>
 
                       <RepeatDropdown
-                        value={desc.repeatMode}
+                        value={(desc.repeatMode ?? 'once') as RepeatMode}
                         customWeekdays={desc.repeatMode === 'custom' ? desc.customWeekdays ?? undefined : undefined}
                         onChange={(repeatMode: RepeatMode, customWeekdays) => {
                           updateDescriptionField(index, {
