@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${montserrat.className} h-full antialiased`}>
-      <body className="min-h-screen flex flex-col bg-[#070912] text-[#e9eefc]">
+      <body className="min-h-screen flex flex-col bg-[#070912] text-[#e9eefc]" suppressHydrationWarning={true}>
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

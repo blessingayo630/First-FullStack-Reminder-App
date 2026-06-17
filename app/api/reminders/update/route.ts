@@ -222,6 +222,7 @@ import { supabaseService as supabase } from "@/lib/supabase";
 
 export async function PUT(req: Request) {
   try {
+
     const body = await req.json();
 
     const {
@@ -301,6 +302,10 @@ export async function PUT(req: Request) {
             resolvedRepeatMode === "custom"
               ? d?.customWeekdays ?? d?.custom_weekdays ?? customWeekdays ?? null
               : null,
+          // ON by default for repeating reminder sub-items.
+          // UI uses `checked={item.is_enabled !== false}` so NULL is treated as ON,
+          // but this makes it deterministic when inserting new rows.
+          is_enabled: true,
         };
       };
 

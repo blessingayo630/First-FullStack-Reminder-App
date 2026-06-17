@@ -45,10 +45,23 @@ export default function NonRepeatingRemindersPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const refetch = useCallback(async () => {
-    const response = await fetch('/api/reminders/getAll', { cache: 'no-store' });
-    const data = await response.json();
-    setReminders(Array.isArray(data) ? data : []);
+    const { supabase } = await import('@/lib/supabase');
+    const { data } = await supabase.auth.getSession();
+    const email = data?.session?.user?.email;
+
+    if (!email) {
+      setReminders([]);
+      return;
+    }
+
+    const response = await fetch(
+      `/api/reminders/getNonRepeatingByEmail?email=${encodeURIComponent(email)}`,
+      { cache: 'no-store' }
+    );
+    const next = await response.json();
+    setReminders(Array.isArray(next) ? next : []);
   }, []);
+
 
   useEffect(() => {
     const load = async () => {
@@ -64,6 +77,45 @@ export default function NonRepeatingRemindersPage() {
     load();
   }, [refetch]);
 
+  // When delivered-once items show up here, immediately turn OFF the parent reminder switch.
+  // This prevents reappearing on /homepage and reflects “no more emails expected”.
+  useEffect(() => {
+    if (!reminders.length) return;
+
+    const onceDeliveredReminderIds = reminders
+      .filter((r) =>
+        (r.reminder_items ?? []).some(
+          (it) => (it.repeat_mode ?? 'once') === 'once' && it.is_sent === true
+        )
+      )
+      .map((r) => r.id);
+
+    if (!onceDeliveredReminderIds.length) return;
+
+    const run = async () => {
+      await Promise.all(
+        onceDeliveredReminderIds.map(async (id) => {
+          try {
+            await fetch('/api/reminders/toggle-parent', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id, isEnabled: false }),
+            });
+          } catch (e) {
+            console.error('Failed to auto-disable reminder:', e);
+          }
+        })
+      );
+
+      // Refresh after updates.
+      await refetch();
+    };
+
+    // Fire and forget; avoid blocking paint.
+    run().catch((e) => console.error('Auto-disable run error:', e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reminders, refetch]);
+
   // Simple polling to keep list updated
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -77,7 +129,8 @@ export default function NonRepeatingRemindersPage() {
   const nonRepeatingReminders = useMemo(() => {
     const withOnceItems = reminders
       .map((r) => {
-        // Only show items that are 'once' AND have been sent (email message received)
+        // Non-repeating page: show only "once" items that have been delivered via EMAIL.
+        // Current DB schema uses `is_sent` as the delivery indicator for this UI.
         const items = (r.reminder_items ?? []).filter(
           (it) => (it.repeat_mode ?? 'once') === 'once' && it.is_sent
         );
@@ -96,6 +149,7 @@ export default function NonRepeatingRemindersPage() {
         };
       })
       .filter((x) => x.onceItems.length > 0);
+
 
     withOnceItems.sort((a, b) => {
       if (a.topRank !== b.topRank) return a.topRank - b.topRank;

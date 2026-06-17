@@ -35,19 +35,41 @@
 import { NextResponse } from "next/server";
 import { supabaseService as supabase } from "@/lib/supabase";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    // IMPORTANT: keep reminders scoped to the logged-in user.
+    // This route uses service role, so we must filter by user email.
+    const url = new URL(req.url);
+    const email = url.searchParams.get("email");
+
+    if (!email) {
+      return NextResponse.json([], { status: 200 });
+    }
+
     const { data, error } = await supabase
       .from("reminders")
       .select(`
         *,
         reminder_items (*)
       `)
+      .eq("user_email", email)
       .order("created_at", { ascending: false });
+
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    // Homepage should NOT show once-sub-reminders that have already been delivered via email.
+    // Non-repeating reminders page is the UI for delivered-once items.
+    const filtered = (data ?? [])
+      .map((r: any) => {
+        const items = (r.reminder_items ?? []).filter(
+          (it: any) => !((it?.repeat_mode ?? 'once') === 'once' && it?.is_sent === true)
+        );
+        return { ...r, reminder_items: items };
+      })
+      .filter((r: any) => (r.reminder_items?.length ?? 0) > 0);
+
+    return NextResponse.json(filtered);
   } catch (err: any) {
     return NextResponse.json(
       {

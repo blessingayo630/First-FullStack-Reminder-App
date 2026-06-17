@@ -160,31 +160,46 @@ export default function HomePage() {
   }, [inlineToast]);
 
   const filteredReminders = useMemo(() => {
-    const processed = reminders.map((r) => ({ ...r, reminder_items: r.reminder_items ?? [] }));
-
-    return processed
-      .map((r) => {
-        const items = (r.reminder_items ?? []).filter((it) => {
-          const repeatMode = it.repeat_mode ?? 'once';
-          // Keep repeating modes always.
-          if (repeatMode !== 'once') return true;
-          // For "once" items: keep only if NOT sent yet.
-          return !it.is_sent;
-        });
-        return { ...r, reminder_items: items };
-      })
-      .filter((r) => (r.reminder_items ?? []).length > 0);
+    // Homepage should always show reminders for the user.
+    // Do not hide "once" reminders based on is_sent; the "non-repeating" page is controlled by email delivery.
+    return reminders.map((r) => ({
+      ...r,
+      reminder_items: (r.reminder_items ?? []).map((it) => ({ ...it })),
+    }));
   }, [reminders]);
+
+
+  const [userEmail, setUserEmail] = useState<string>('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadEmail = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const email = data?.session?.user?.email ?? '';
+        if (cancelled) return;
+        setUserEmail(email);
+      } catch {
+        // ignore
+      }
+    };
+
+    loadEmail();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refetch = useCallback(async () => {
     try {
-      const response = await fetch('/api/reminders/getAll', { cache: 'no-store' });
+      const response = await fetch(`/api/reminders/getAll?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
       const data = await response.json();
       setReminders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error refetching reminders:', error);
     }
-  }, []);
+  }, [userEmail]);
 
   useEffect(() => {
     const initNotifications = async () => {
@@ -237,7 +252,9 @@ export default function HomePage() {
     const loadReminders = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/reminders/getAll');
+        const response = await fetch(
+          `/api/reminders/getAll?email=${encodeURIComponent(userEmail)}`
+        );
         const data = await response.json();
         setReminders(Array.isArray(data) ? data : []);
       } catch (error) {
@@ -247,10 +264,14 @@ export default function HomePage() {
       }
     };
 
+    if (!userEmail) return;
     loadReminders();
-  }, []);
+  }, [userEmail]);
+
 
   useEffect(() => {
+    if (!userEmail) return;
+
     let cancelled = false;
 
     const poll = async () => {
@@ -258,8 +279,10 @@ export default function HomePage() {
       if (document.visibilityState === 'hidden') return;
 
       try {
-        const response = await fetch('/api/reminders/getAll', { cache: 'no-store' });
+        const response = await fetch(`/api/reminders/getAll?email=${encodeURIComponent(userEmail)}`, { cache: 'no-store' });
         const data = await response.json();
+
+
         if (!Array.isArray(data)) return;
 
         setReminders((prev) => {
