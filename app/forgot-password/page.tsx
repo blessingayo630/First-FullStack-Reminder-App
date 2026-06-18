@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import AuthFormShell from '../components/auth/AuthFormShell';
 import { AuthField, validateEmail } from '../components/auth/inputs';
+import AuthStatusPopup from '../components/auth/AuthStatusPopup';
+import { useRouter } from 'next/navigation';
 
 type FormState = {
   email: string;
 };
-
 export default function ForgotPasswordPage() {
   const router = useRouter();
 
@@ -41,16 +41,19 @@ export default function ForgotPasswordPage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        setErrors((prev) => ({
-          ...prev,
-          email: data?.error ? String(data.error) : prev.email,
-        }));
+        const msg = data?.error ? String(data.error) : 'Request failed';
+        // Stay on the same page so the popup/message can be shown here.
+        setErrors({ email: msg });
+        setSent(false);
         return;
       }
 
+      // Show success on this same /forgot-password page.
       setSent(true);
-    } catch {
-      // no-op
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Request failed';
+      // Stay on the same page and surface message inline.
+      setErrors({ email: msg });
     } finally {
       setSubmitting(false);
     }
@@ -61,22 +64,22 @@ export default function ForgotPasswordPage() {
       title="Forgot Password"
       subtitle="Enter your email to receive a reset link."
       footer={
-        <div className="text-white/70 text-sm flex items-center justify-between">
-          <button type="button" className="text-[#ffb020] hover:text-[#ff7a18] underline" onClick={() => router.push('/login')}>
-            Back to login
-          </button>
-        </div>
+<div className="text-white/70 text-sm flex items-center justify-between">
+            <button type="button" className="text-[#ffb020] hover:text-[#ff7a18] underline cursor-pointer" onClick={() => router.push('/login')}>
+              Back to login
+            </button>
+          </div>
       }
     >
       {sent ? (
-        <div className="text-white/70 text-sm">
-          If an account exists for this email, you will receive a reset link.
-          <div className="mt-5">
-            <button type="button" className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition" onClick={() => router.push('/login')}>
-              Return to Login
-            </button>
-          </div>
-        </div>
+        <AuthStatusPopup
+          variant="success"
+          title="Reset link sent"
+          message="If an account exists for this email, you will receive a reset link."
+          durationMs={4200}
+          redirectTo="/login"
+
+        />
       ) : (
         <form onSubmit={handleSubmit}>
           <AuthField

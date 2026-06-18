@@ -110,7 +110,10 @@ function CustomDropdown({
 }
 
 export default function HomePage() {
+  // Temporarily keep the legacy component until the new split implementation is fully wired.
+  // (Next step: replace this file with a clean composition layer and remove legacy commented code.)
   const [reminders, setReminders] = useState<Reminder[]>([]);
+
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -667,17 +670,36 @@ export default function HomePage() {
       .replace(',', '');
   };
 
+  const [logoutPopup, setLogoutPopup] = useState<{
+    visible: boolean;
+    phase: 'loading' | 'done';
+  }>({ visible: false, phase: 'loading' });
+
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) return;
-      window.location.href = '/login';
     } catch {
-      window.location.href = '/login';
+      // ignore
     }
+
+    // Show popup, then redirect.
+    setLogoutPopup({ visible: true, phase: 'loading' });
+
+    window.setTimeout(() => {
+      setLogoutPopup({ visible: true, phase: 'done' });
+      window.setTimeout(() => {
+        window.location.href = '/login';
+      }, 900);
+    }, 3500);
   };
 
+
   if (loading) return <Loading />;
+
+  // loader for logout popup
+  // eslint-disable-next-line react/no-unknown-property
+
 
   return (
     <div className="min-h-screen">
@@ -690,6 +712,47 @@ export default function HomePage() {
           onClose={() => setInlineToast(null)}
         />
       ) : null}
+
+      {logoutPopup.visible ? (
+        <div className="pointer-events-none fixed top-4 right-4 z-[2147483647]" role="status" aria-live="polite">
+          <div
+            className="card-neon rounded-lg px-4 py-3"
+            style={{
+              background: '#070912',
+              borderColor: 'rgba(255, 59, 92, 0.35)',
+              boxShadow: '0 0 24px rgba(255, 59, 92, 0.20)',
+              width: 'min(320px, calc(100vw - 2rem))',
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className="shrink-0 alarm-status-badge"
+                style={{
+                  borderColor: 'rgba(255, 59, 92, 0.35)',
+                  background: 'rgba(255, 59, 92, 0.10)',
+                  color: 'rgba(233, 238, 252, 0.98)',
+                }}
+              >
+                <span className="font-bold">!</span>
+              </div>
+
+              <div className="min-w-0">
+                <div className="font-semibold text-white/95 text-sm sm:text-base truncate">
+                  {logoutPopup.phase === 'loading' ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="loader loader--small" />
+                      login-out....
+                    </span>
+                  ) : (
+                    'login-out....'
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
 
 
       {(currentPath === '/404' || currentPath === '/not-found') && (
@@ -719,7 +782,25 @@ export default function HomePage() {
         </div>
       )}
 
+      <style jsx>{`
+        .loader {
+          width: 14px;
+          height: 14px;
+          border: 2px solid rgba(255, 176, 32, 0.35);
+          border-top-color: rgba(255, 176, 32, 0.95);
+          border-radius: 50%;
+          display: inline-block;
+          animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .loader--small { width: 12px; height: 12px; }
+      `}</style>
+
       <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#070912]/70 backdrop-blur shadow-[0_8px_30px_rgba(0,0,0,0.45)] px-4 py-3">
+
 
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between gap-3">

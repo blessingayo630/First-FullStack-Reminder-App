@@ -1,4 +1,4 @@
-   // 'use client';
+      // 'use client';
 
 // import React, { useMemo, useState } from 'react';
 // import { useRouter, useSearchParams } from 'next/navigation';
@@ -254,6 +254,7 @@ import {
   validatePassword,
 } from '../components/auth/inputs';
 import { supabase } from '@/lib/supabase';
+import AuthStatusPopup from '../components/auth/AuthStatusPopup';
 
 type FormState = {
   password: string;
@@ -310,10 +311,13 @@ export default function ResetPasswordPage() {
       });
 
       if (error) {
-        setErrors({ password: error.message });
+        setErrors({
+          password: error.message,
+        });
         return;
       }
 
+      // Show popup/message on the same /reset-password page first.
       setDone(true);
     } finally {
       setSubmitting(false);
@@ -326,27 +330,21 @@ export default function ResetPasswordPage() {
       subtitle="Choose a new password."
     >
       {done ? (
-        <div>
-          Password updated successfully
-          <div className="mt-5">
-            <button
-              type="button"
-              className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition"
-              onClick={() => router.push('/login')}
-            >
-              Go to Login
-            </button>
-          </div>
-        </div>
+        <AuthStatusPopup
+          variant="success"
+          title="Password updated"
+          message="You can now log in with your new password."
+          durationMs={4200}
+          redirectTo="/login"
+
+        />
       ) : (
         <form onSubmit={handleSubmit}>
           <AuthField
             label="New Password"
             type="password"
             value={form.password}
-            onChange={(v) =>
-              setForm((p) => ({ ...p, password: v }))
-            }
+            onChange={(v) => setForm((p) => ({ ...p, password: v }))}
             error={errors.password}
           />
 
@@ -358,8 +356,7 @@ export default function ResetPasswordPage() {
               setForm((p) => ({
                 ...p,
                 confirmPassword: v,
-              }))
-            }
+              }))}
             error={errors.confirmPassword}
           />
 

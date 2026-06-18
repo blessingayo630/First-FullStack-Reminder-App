@@ -2,7 +2,9 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+
 import AuthFormShell from '../components/auth/AuthFormShell';
+import AuthStatusPopup from '../components/auth/AuthStatusPopup';
 import {
   AuthField,
   normalizePhone,
@@ -20,6 +22,15 @@ type FormState = {
   confirmPassword: string;
 };
 
+type PopupState =
+  | null
+  | {
+      variant: 'success' | 'error';
+      title: string;
+      message?: string;
+      durationMs?: number;
+    };
+
 export default function SignUpPage() {
   const router = useRouter();
 
@@ -34,6 +45,8 @@ export default function SignUpPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string | null>>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const [authPopup, setAuthPopup] = useState<PopupState>(null);
+
   const computed = useMemo(() => {
     return {
       fullName: validateFullName(form.fullName),
@@ -44,7 +57,6 @@ export default function SignUpPage() {
     };
   }, [form.fullName, form.email, form.phoneNumber, form.password, form.confirmPassword]);
 
-
   const canSubmit = Object.values(computed).every((v) => !v);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -54,6 +66,7 @@ export default function SignUpPage() {
 
     try {
       setSubmitting(true);
+
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,109 +81,141 @@ export default function SignUpPage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        // Prefer showing it under email if it looks like a user-related error.
-        setErrors((prev) => ({
-          ...prev,
-          email: data?.error ? String(data.error) : prev.email,
-        }));
+        const msg = data?.error ? String(data.error) : 'Signup failed';
+        setAuthPopup({
+          variant: 'error',
+          title: 'Sign up failed',
+          message: msg,
+        });
         return;
       }
 
-      router.push('/login');
-    } catch {
-      // no-op
+      setAuthPopup({
+        variant: 'success',
+        title: 'Account created',
+        message: 'Please login to continue.',
+        durationMs: 3500,
+      });
+
+      // Navigate to login after successful signup popup
+      setTimeout(() => {
+        router.push('/login');
+      }, 3500);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Request failed';
+      setAuthPopup({
+        variant: 'error',
+        title: 'Sign up failed',
+        message: msg,
+      });
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <AuthFormShell
-      title="Sign Up"
-      subtitle="Create your account."
-      footer={
-        <div className="text-white/70 text-sm flex items-center justify-between">
-          <button type="button" className="text-[#ffb020] hover:text-[#ff7a18] underline" onClick={() => router.push('/login')}>
-            Already have an account? Login
-          </button>
-        </div>
-      }
-    >
-      <form onSubmit={handleSubmit}>
-        <AuthField
-          label="Full-name"
-          type="text"
-          required
-          placeholder="Your full name"
-          value={form.fullName}
-          onChange={(next) => setForm((p) => ({ ...p, fullName: next }))}
-          error={errors.fullName}
-          autoComplete="name"
+    <>
+      {authPopup ? (
+        <AuthStatusPopup
+          variant={authPopup.variant}
+          title={authPopup.title}
+          message={authPopup.message}
+          durationMs={authPopup.durationMs ?? 3500}
         />
+      ) : null}
 
-        <AuthField
-          label="Email"
-          type="email"
-          required
-          placeholder="you@example.com"
-          value={form.email}
-          onChange={(next) => setForm((p) => ({ ...p, email: next }))}
-          error={errors.email}
-          autoComplete="email"
-          inputMode="email"
-        />
+      <AuthFormShell
+        title="Sign Up"
+        subtitle="Create your account."
+        footer={
+<div className="text-white/70 text-sm flex items-center justify-between">
+            <button
+              type="button"
+              className="text-[#ffb020] hover:text-[#ff7a18] underline cursor-pointer"
+              onClick={() => router.push('/login')}
+            >
+              Already have an account? Login
+            </button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSubmit}>
+          <AuthField
+            label="Full-name"
+            type="text"
+            required
+            placeholder="Your full name"
+            value={form.fullName}
+            onChange={(next) => setForm((p) => ({ ...p, fullName: next }))}
+            error={errors.fullName}
+            autoComplete="name"
+          />
 
-        <AuthField
-          label="Phone-number"
-          type="tel"
-          placeholder="e.g., +1234567890"
-          value={form.phoneNumber}
-          onChange={(next) => setForm((p) => ({ ...p, phoneNumber: next }))}
-          error={errors.phoneNumber}
-          autoComplete="tel"
-          inputMode="tel"
-        />
+          <AuthField
+            label="Email"
+            type="email"
+            required
+            placeholder="you@example.com"
+            value={form.email}
+            onChange={(next) => setForm((p) => ({ ...p, email: next }))}
+            error={errors.email}
+            autoComplete="email"
+            inputMode="email"
+          />
 
-        <AuthField
-          label="Password"
-          type="password"
-          required
-          placeholder="Your password"
-          value={form.password}
-          onChange={(next) => setForm((p) => ({ ...p, password: next }))}
-          error={errors.password}
-          autoComplete="new-password"
-        />
+          <AuthField
+            label="Phone-number"
+            type="tel"
+            placeholder="e.g., +1234567890"
+            value={form.phoneNumber}
+            onChange={(next) => setForm((p) => ({ ...p, phoneNumber: next }))}
+            error={errors.phoneNumber}
+            autoComplete="tel"
+            inputMode="tel"
+            required={false}
+          />
 
-        <AuthField
-          label="Confirm Password"
-          type="password"
-          required
-          placeholder="Confirm your password"
-          value={form.confirmPassword}
-          onChange={(next) => setForm((p) => ({ ...p, confirmPassword: next }))}
-          error={errors.confirmPassword}
-          autoComplete="new-password"
-        />
 
-        <div className="mt-6 flex flex-col gap-3">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition"
-          >
-            {submitting ? 'Creating account...' : 'Sign Up'}
-          </button>
-        </div>
-      </form>
-    </AuthFormShell>
+          <AuthField
+            label="Password"
+            type="password"
+            required
+            placeholder="Your password"
+            value={form.password}
+            onChange={(next) => setForm((p) => ({ ...p, password: next }))}
+            error={errors.password}
+            autoComplete="new-password"
+          />
+
+          <AuthField
+            label="Confirm Password"
+            type="password"
+            required
+            placeholder="Confirm your password"
+            value={form.confirmPassword}
+            onChange={(next) => setForm((p) => ({ ...p, confirmPassword: next }))}
+            error={errors.confirmPassword}
+            autoComplete="new-password"
+          />
+
+          <div className="mt-6 flex flex-col gap-3">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="alarm-btn alarm-btn--primary cursor-pointer text-white px-4 py-2 rounded-lg transition"
+            >
+              {submitting ? 'Creating account...' : 'Sign Up'}
+            </button>
+          </div>
+        </form>
+      </AuthFormShell>
+    </>
   );
 }
 
 function validatePhoneNonOptional(phone: string): string | null {
-  // Reuse existing phone rules, but allow empty to be optional.
-  // For non-empty: validatePhone requires 10-15 digits.
   const digits = normalizePhone(phone).replace(/\D/g, '');
+
   if (!digits.trim()) return 'Phone number is required.';
   if (digits.length < 10 || digits.length > 15) return 'Phone number must be 10 to 15 digits.';
   return null;
